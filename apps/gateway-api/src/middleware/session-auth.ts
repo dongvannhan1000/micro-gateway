@@ -30,13 +30,13 @@ export async function sessionAuth(c: Context<{ Bindings: Env; Variables: Variabl
             const result = await jwtVerify(token, secret);
             payload = result.payload;
         } else if (header.alg === 'RS256' || header.alg === 'ES256') {
-            console.log(`[Nest] [GatewayService] Action: verifying_asymmetric (Metadata: alg=${header.alg})`);
+            console.log(`[GatewayService] Action: verifying_asymmetric (Metadata: alg=${header.alg})`);
             if (!jwks) {
                 const url = c.env.SUPABASE_URL?.replace(/\/$/, '');
                 if (!url) throw new Error('SUPABASE_URL is not defined in environment');
 
                 const jwksUrl = `${url}/auth/v1/.well-known/jwks.json`;
-                console.log(`[Nest] [GatewayService] Action: fetching_jwks (Metadata: url=${jwksUrl})`);
+                console.log(`[GatewayService] Action: fetching_jwks (Metadata: url=${jwksUrl})`);
                 jwks = createRemoteJWKSet(new URL(jwksUrl));
             }
             const result = await jwtVerify(token, jwks);

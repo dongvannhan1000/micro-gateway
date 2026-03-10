@@ -7,7 +7,7 @@ const app = new Hono<{ Bindings: Env; Variables: Variables }>();
 
 // Basic Health Check (Following User Rules for logging/output)
 app.get('/', (c) => {
-  return c.text(`[Nest] [GatewayService] Action: Server check (v1.0.0 Status: Ready)`);
+  return c.text(`[GatewayService] Action: Server check (v1.0.0 Status: Ready)`);
 });
 
 app.get('/health', (c) => c.json({
