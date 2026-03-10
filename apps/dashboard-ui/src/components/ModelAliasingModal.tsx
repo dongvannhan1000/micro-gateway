@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { Modal } from '@/components/Modal';
-import { Settings, Plus, Trash2, Loader2, ArrowRight } from 'lucide-react';
+import { Settings, Plus, Trash2, Loader2, ArrowRight, ShieldCheck } from 'lucide-react';
 import { updateProjectSettings } from '@/app/dashboard/actions';
 
 export function ModelAliasingModal({ projectId, currentAliases }: { projectId: string, currentAliases: string | undefined }) {
@@ -73,6 +73,10 @@ export function ModelAliasingModal({ projectId, currentAliases }: { projectId: s
                     </div>
 
                     <div className="p-4 bg-glass-bg rounded-xl border border-dashed border-glass-border space-y-4">
+                        <div className="flex items-center gap-2 mb-2">
+                            <ShieldCheck className="w-5 h-5 text-accent-violet" />
+                            <h2 className="text-xl font-bold">Provider API Keys</h2>
+                        </div>
                         <div className="grid grid-cols-2 gap-3">
                             <div className="space-y-1">
                                 <label className="text-[10px] uppercase font-bold text-muted">Original Model</label>

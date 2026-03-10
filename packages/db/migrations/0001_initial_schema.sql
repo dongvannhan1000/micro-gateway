@@ -30,7 +30,8 @@ CREATE TABLE IF NOT EXISTS provider_configs (
     api_key_encrypted TEXT NOT NULL,
     is_default BOOLEAN DEFAULT 0,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE
+    FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE,
+    UNIQUE(project_id, provider)
 );
 
 CREATE TABLE IF NOT EXISTS request_logs (

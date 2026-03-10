@@ -28,11 +28,13 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
 
     let project: Project | null = null;
     let apiKeys: ApiKey[] = [];
+    let providerConfigs: any[] = [];
 
     if (token) {
         try {
             project = await fetchGateway(`/api/projects/${id}`, token);
             apiKeys = await fetchGateway(`/api/projects/${id}/keys`, token);
+            providerConfigs = await fetchGateway(`/api/projects/${id}/provider-configs`, token);
         } catch (e) {
             console.error('Failed to fetch data:', e);
         }
@@ -61,9 +63,12 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
                         <p className="text-muted mt-1">{project.description || 'Project Overview'}</p>
                     </div>
                     <div className="flex items-center gap-3">
-                        <button className="glass border-glass-border px-4 py-2 text-sm font-medium hover:bg-glass-bg rounded-lg transition-all flex items-center gap-2">
+                        <Link
+                            href={`/dashboard/projects/${id}/settings`}
+                            className="glass border-glass-border px-4 py-2 text-sm font-medium hover:bg-glass-bg rounded-lg transition-all flex items-center gap-2"
+                        >
                             <Settings className="w-4 h-4" /> Settings
-                        </button>
+                        </Link>
                         <NewKeyModal projectId={id} />
                     </div>
                 </div>
@@ -138,45 +143,62 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
                 </div>
 
                 {/* Right: Project Settings / Aliasing Preview */}
-                <div className="space-y-6">
-                    <div className="glass-card border-accent-blue/20 bg-accent-blue/5">
-                        <h3 className="font-bold mb-2 flex items-center gap-2">
-                            <ShieldCheck className="w-4 h-4 text-accent-blue" /> Gateway Endpoint
-                        </h3>
-                        <p className="text-xs text-muted mb-4">Use this base URL in your OpenAI SDK.</p>
-                        <div className="bg-background/50 p-3 rounded-lg border border-glass-border flex items-center justify-between group">
-                            <code className="text-[11px] text-accent-blue truncate">https://gw.com/v1</code>
-                            <button className="text-muted hover:text-white transition-colors p-1">
-                                <Copy className="w-3 h-3" />
-                            </button>
-                        </div>
-                    </div>
-
-                    <div className="glass-card">
-                        <h3 className="font-bold mb-4 flex items-center justify-between">
-                            <span>Model Aliasing</span>
-                            <span className="text-[10px] bg-accent-violet/10 text-accent-violet px-2 py-0.5 rounded border border-accent-violet/20 uppercase font-bold tracking-tighter">Active</span>
-                        </h3>
-                        <div className="space-y-4">
-                            {project.model_aliases ? (
-                                Object.entries(JSON.parse(project.model_aliases)).map(([orig, target]: any) => (
-                                    <div key={orig} className="flex items-center justify-between bg-glass-bg p-3 rounded-xl border border-glass-border">
-                                        <div className="flex flex-col">
-                                            <span className="text-[10px] text-muted uppercase font-bold">Request</span>
-                                            <span className="text-xs font-medium">{orig}</span>
-                                        </div>
-                                        <ChevronRight className="w-4 h-4 text-muted" />
-                                        <div className="flex flex-col text-right">
-                                            <span className="text-[10px] text-muted uppercase font-bold">Route To</span>
-                                            <span className="text-xs font-bold text-accent-violet">{target}</span>
-                                        </div>
-                                    </div>
-                                ))
-                            ) : null}
-                            <div className="text-center py-2 space-y-2">
-                                {!project.model_aliases && <p className="text-xs text-muted italic mb-2">No model aliases configured.</p>}
-                                <ModelAliasingModal projectId={id} currentAliases={project.model_aliases} />
+                <div className="glass-card">
+                    <h3 className="font-bold mb-4 flex items-center gap-2">
+                        <ShieldCheck className="w-4 h-4 text-accent-blue" />
+                        Active Providers
+                    </h3>
+                    <div className="flex flex-wrap gap-2">
+                        {providerConfigs.length > 0 ? providerConfigs.map((p) => (
+                            <div key={p.provider} className="flex items-center gap-2 px-3 py-1 bg-accent-blue/10 rounded-full border border-accent-blue/20">
+                                <span className="w-1.5 h-1.5 rounded-full bg-accent-blue shadow-[0_0_8px_rgba(77,159,255,0.5)]"></span>
+                                <span className="text-[10px] text-accent-blue font-bold uppercase tracking-widest">{p.provider === 'google' ? 'Gemini' : p.provider}</span>
                             </div>
+                        )) : (
+                            <div className="text-[10px] text-muted italic p-2 border border-dashed border-glass-border rounded-lg w-full text-center">
+                                No providers configured. Go to Settings.
+                            </div>
+                        )}
+                    </div>
+                </div>
+
+                <div className="glass-card border-accent-blue/20 bg-accent-blue/5">
+                    <h3 className="font-bold mb-2 flex items-center gap-2">
+                        <ShieldCheck className="w-4 h-4 text-accent-blue" /> Gateway Endpoint
+                    </h3>
+                    <p className="text-xs text-muted mb-4">Use this base URL in your OpenAI SDK.</p>
+                    <div className="bg-background/50 p-3 rounded-lg border border-glass-border flex items-center justify-between group">
+                        <code className="text-[11px] text-accent-blue truncate">https://gw.com/v1</code>
+                        <button className="text-muted hover:text-white transition-colors p-1">
+                            <Copy className="w-3 h-3" />
+                        </button>
+                    </div>
+                </div>
+
+                <div className="glass-card">
+                    <h3 className="font-bold mb-4 flex items-center justify-between">
+                        <span>Model Aliasing</span>
+                        <span className="text-[10px] bg-accent-violet/10 text-accent-violet px-2 py-0.5 rounded border border-accent-violet/20 uppercase font-bold tracking-tighter">Active</span>
+                    </h3>
+                    <div className="space-y-4">
+                        {project.model_aliases ? (
+                            Object.entries(JSON.parse(project.model_aliases)).map(([orig, target]: any) => (
+                                <div key={orig} className="flex items-center justify-between bg-glass-bg p-3 rounded-xl border border-glass-border">
+                                    <div className="flex flex-col">
+                                        <span className="text-[10px] text-muted uppercase font-bold">Request</span>
+                                        <span className="text-xs font-medium">{orig}</span>
+                                    </div>
+                                    <ChevronRight className="w-4 h-4 text-muted" />
+                                    <div className="flex flex-col text-right">
+                                        <span className="text-[10px] text-muted uppercase font-bold">Route To</span>
+                                        <span className="text-xs font-bold text-accent-violet">{target}</span>
+                                    </div>
+                                </div>
+                            ))
+                        ) : null}
+                        <div className="text-center py-2 space-y-2">
+                            {!project.model_aliases && <p className="text-xs text-muted italic mb-2">No model aliases configured.</p>}
+                            <ModelAliasingModal projectId={id} currentAliases={project.model_aliases} />
                         </div>
                     </div>
                 </div>

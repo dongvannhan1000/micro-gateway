@@ -37,23 +37,24 @@ export async function proxyHandler(c: Context<{ Bindings: Env; Variables: Variab
     // Default to Gemini for Sprint 1 if no OpenAI key is configured
     let targetBaseUrl = GEMINI_OPENAI_BASE_URL;
     let providerKey = '';
-
+    let providerName = 'default';
     try {
         const { results } = await c.env.DB.prepare(`
-      SELECT * FROM provider_configs WHERE project_id = ? AND is_default = 1 LIMIT 1
+      SELECT * FROM provider_configs 
+      WHERE project_id = ? 
+      ORDER BY is_default DESC, created_at ASC 
+      LIMIT 1
     `).bind(project.id).all();
 
         if (results && results.length > 0) {
             const config = results[0] as any;
+            providerName = config.provider;
             providerKey = await decryptProviderKey(config.api_key_encrypted, c.env.ENCRYPTION_SECRET);
 
             if (config.provider === 'openai') {
                 targetBaseUrl = 'https://api.openai.com/v1/';
             }
         } else {
-            // Fallback or error if no provider configured
-            // For now, if we have a GEMINI_API_KEY secret, we use it as fallback
-            // Ideally, every project must have a provider_config
             return openAiError(c, 'No AI provider configured for this project', 'invalid_request_error', 'no_provider_config');
         }
     } catch (err) {
@@ -62,7 +63,16 @@ export async function proxyHandler(c: Context<{ Bindings: Env; Variables: Variab
     }
 
     // 3. Prepare Forward Request
-    const forwardUrl = new URL(c.req.path.replace(/^\/v1/, ''), targetBaseUrl).toString();
+    // Remove leading /v1/ and ensure no leading slash for relative URL construction
+    let relativePath = c.req.path.replace(/^\/v1/, '');
+    if (relativePath.startsWith('/')) relativePath = relativePath.slice(1);
+
+    // Ensure targetBaseUrl ends with /
+    const baseUrl = targetBaseUrl.endsWith('/') ? targetBaseUrl : `${targetBaseUrl}/`;
+
+    const forwardUrl = `${baseUrl}${relativePath}`;
+    console.log(`[Gateway] [Proxy] Target: ${providerName} | URL: ${forwardUrl}`);
+
     const headers = new Headers(c.req.header());
     headers.set('Authorization', `Bearer ${providerKey}`);
     headers.delete('host'); // Let Cloudflare set the correct host
@@ -112,7 +122,21 @@ export async function proxyHandler(c: Context<{ Bindings: Env; Variables: Variab
         }
 
         // 5. Handle Non-Streaming
-        const resData = await response.json() as any;
+        const contentType = response.headers.get('content-type');
+        let resData: any;
+
+        if (contentType && contentType.includes('application/json')) {
+            resData = await response.json();
+        } else {
+            const text = await response.text();
+            console.error(`[Gateway] [Proxy] Unexpected non-JSON response (${response.status}):`, text);
+            return openAiError(
+                c,
+                `AI provider returned an unexpected response format: ${response.status}`,
+                'server_error'
+            );
+        }
+
         const usage = resData.usage || { prompt_tokens: 0, completion_tokens: 0, total_tokens: 0 };
         const cost = calculateCost(targetModel, usage.prompt_tokens, usage.completion_tokens);
 
