@@ -1,0 +1,20 @@
+{
+  "name": "@ms-gateway/api",
+  "version": "1.0.0",
+  "description": "Micro-Security Gateway Core (Hono + Cloudflare Workers)",
+  "main": "src/index.ts",
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler dev src/index.ts",
+    "deploy": "wrangler deploy src/index.ts",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "hono": "^4.0.0"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20240222.0",
+    "vitest": "^1.0.0",
+    "wrangler": "^4.71.0"
+  }
+}

@@ -1,0 +1,14 @@
+{
+  "name": "micro-security-gateway",
+  "private": true,
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev:gateway": "npm run dev --workspace=@ms-gateway/api",
+    "dev:dashboard": "npm run dev --workspace=@ms-gateway/dashboard",
+    "deploy:gateway": "npm run deploy --workspace=@ms-gateway/api",
+    "deploy:dashboard": "npm run deploy --workspace=@ms-gateway/dashboard"
+  }
+}

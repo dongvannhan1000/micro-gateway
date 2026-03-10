@@ -1,0 +1,118 @@
+@import "tailwindcss";
+
+/* ═══════════════════════════════════════════════════════
+   🎨 NEON AURORA Design System (Tailwind v4 @theme)
+   Agent: agency-ux-architect
+   ═══════════════════════════════════════════════════════ */
+
+:root {
+  --background: #0A0E1A;
+  --foreground: #FFFFFF;
+  --muted: #A0AEC0;
+  --accent-blue: #4D9FFF;
+  --accent-violet: #B38BFF;
+  --glass-bg: rgba(255, 255, 255, 0.05);
+  --glass-border: rgba(255, 255, 255, 0.1);
+  --neon-shadow: 0 0 15px rgba(77, 159, 255, 0.3);
+  --neon-shadow-violet: 0 0 15px rgba(179, 139, 255, 0.3);
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-muted: var(--muted);
+  --color-accent-blue: var(--accent-blue);
+  --color-accent-violet: var(--accent-violet);
+  --color-glass-bg: var(--glass-bg);
+  --color-glass-border: var(--glass-border);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-geist-sans), 'Inter', system-ui, sans-serif;
+}
+
+/* ═══════════════════════════════════════════════════════
+   Glassmorphism Utilities
+   ═══════════════════════════════════════════════════════ */
+
+.glass {
+  background: var(--glass-bg);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid var(--glass-border);
+  border-radius: 16px;
+}
+
+.glass-card {
+  background: var(--glass-bg);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid var(--glass-border);
+  border-radius: 16px;
+  padding: 1.5rem;
+  transition: box-shadow 0.3s ease, transform 0.2s ease;
+}
+
+.glass-card:hover {
+  box-shadow: var(--neon-shadow);
+  transform: translateY(-2px);
+}
+
+/* ═══════════════════════════════════════════════════════
+   Gradient Utilities
+   ═══════════════════════════════════════════════════════ */
+
+.text-gradient {
+  background: linear-gradient(135deg, var(--accent-blue), var(--accent-violet));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.bg-neon-gradient {
+  background: linear-gradient(135deg, var(--accent-blue), var(--accent-violet));
+}
+
+.border-neon-gradient {
+  border-image: linear-gradient(135deg, var(--accent-blue), var(--accent-violet)) 1;
+}
+
+/* ═══════════════════════════════════════════════════════
+   Animations
+   ═══════════════════════════════════════════════════════ */
+
+@keyframes glow-pulse {
+
+  0%,
+  100% {
+    box-shadow: 0 0 10px rgba(77, 159, 255, 0.2);
+  }
+
+  50% {
+    box-shadow: 0 0 25px rgba(77, 159, 255, 0.4);
+  }
+}
+
+.animate-glow {
+  animation: glow-pulse 3s ease-in-out infinite;
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-in {
+  animation: fade-in 0.5s ease-out forwards;
+}
