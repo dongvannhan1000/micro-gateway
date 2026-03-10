@@ -24,7 +24,7 @@ export async function createProject(formData: FormData) {
     }
 }
 
-export async function createApiKey(projectId: string, formData: FormData) {
+export async function createGatewayKey(projectId: string, formData: FormData) {
     const supabase = await createClient();
     const { data: { session } } = await supabase.auth.getSession();
     if (!session) throw new Error('Unauthorized');
@@ -33,7 +33,7 @@ export async function createApiKey(projectId: string, formData: FormData) {
     const limit = parseFloat(formData.get('monthly_limit_usd') as string || '0');
 
     try {
-        const result = await fetchGateway(`/api/projects/${projectId}/keys`, session.access_token, {
+        const result = await fetchGateway(`/api/projects/${projectId}/gateway-keys`, session.access_token, {
             method: 'POST',
             body: JSON.stringify({ name, monthly_limit_usd: limit }),
         });
@@ -44,13 +44,13 @@ export async function createApiKey(projectId: string, formData: FormData) {
     }
 }
 
-export async function revokeApiKey(projectId: string, keyId: string) {
+export async function revokeGatewayKey(projectId: string, keyId: string) {
     const supabase = await createClient();
     const { data: { session } } = await supabase.auth.getSession();
     if (!session) throw new Error('Unauthorized');
 
     try {
-        await fetchGateway(`/api/projects/${projectId}/keys/${keyId}`, session.access_token, {
+        await fetchGateway(`/api/projects/${projectId}/gateway-keys/${keyId}`, session.access_token, {
             method: 'DELETE',
         });
         revalidatePath(`/dashboard/projects/${projectId}`);

@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { Modal } from '@/components/Modal';
-import { createApiKey } from '@/app/dashboard/actions';
+import { createGatewayKey } from '@/app/dashboard/actions';
 import { Plus, Loader2, Copy, CheckCircle2 } from 'lucide-react';
 
 export function NewKeyModal({ projectId }: { projectId: string }) {
@@ -15,7 +15,7 @@ export function NewKeyModal({ projectId }: { projectId: string }) {
     const handleSubmit = async (formData: FormData) => {
         setIsPending(true);
         setError(null);
-        const result = await createApiKey(projectId, formData);
+        const result = await createGatewayKey(projectId, formData);
         if (result?.error) {
             setError(result.error);
             setIsPending(false);
@@ -49,7 +49,7 @@ export function NewKeyModal({ projectId }: { projectId: string }) {
                 <Plus className="w-4 h-4" /> New Key
             </button>
 
-            <Modal isOpen={isOpen} onClose={handleClose} title={createdKey ? "API Key Created" : "Create New API Key"}>
+            <Modal isOpen={isOpen} onClose={handleClose} title={createdKey ? "Gateway Key Created" : "Create New Gateway Key"}>
                 {createdKey ? (
                     <div className="space-y-6 py-2">
                         <div className="p-4 bg-accent-blue/5 border border-accent-blue/20 rounded-xl space-y-4">
@@ -117,7 +117,7 @@ export function NewKeyModal({ projectId }: { projectId: string }) {
                                 disabled={isPending}
                                 className="flex-1 bg-neon-gradient text-white py-2.5 rounded-lg text-sm font-medium hover:opacity-90 transition-all disabled:opacity-50 flex items-center justify-center"
                             >
-                                {isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Create Key'}
+                                {isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Create Gateway Key'}
                             </button>
                         </div>
                     </form>

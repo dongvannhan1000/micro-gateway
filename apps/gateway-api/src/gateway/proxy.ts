@@ -8,10 +8,10 @@ const GEMINI_OPENAI_BASE_URL = 'https://generativelanguage.googleapis.com/v1beta
 
 export async function proxyHandler(c: Context<{ Bindings: Env; Variables: Variables }>) {
     const project = c.get('project');
-    const apiKey = c.get('apiKey');
+    const gatewayKey = c.get('gatewayKey');
 
-    if (!project || !apiKey) {
-        return openAiError(c, 'Missing project or API key context', 'server_error', null, 500);
+    if (!project || !gatewayKey) {
+        return openAiError(c, 'Missing project or Gateway key context', 'server_error', null, 500);
     }
 
     const body = await c.req.json();
@@ -73,14 +73,16 @@ export async function proxyHandler(c: Context<{ Bindings: Env; Variables: Variab
     const forwardUrl = `${baseUrl}${relativePath}`;
     console.log(`[Gateway] [Proxy] Target: ${providerName} | URL: ${forwardUrl}`);
 
-    const headers = new Headers(c.req.header());
-    headers.set('Authorization', `Bearer ${providerKey}`);
-    headers.delete('host'); // Let Cloudflare set the correct host
-
+    // Only send clean headers to provider - do NOT forward original headers
+    // Forwarding original headers (host, content-length, etc.) causes routing errors
+    const forwardBody = JSON.stringify({ ...body, model: targetModel });
     const forwardRequest = new Request(forwardUrl, {
         method: c.req.method,
-        headers,
-        body: JSON.stringify({ ...body, model: targetModel }),
+        headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${providerKey}`,
+        },
+        body: forwardBody,
     });
 
     const startTime = Date.now();
@@ -176,28 +178,28 @@ async function logRequest(
     providerRequestId: string = ''
 ) {
     const project = c.get('project')!;
-    const apiKey = c.get('apiKey')!;
+    const gatewayKey = c.get('gatewayKey')!;
     const requestId = crypto.randomUUID();
 
     try {
         await c.env.DB.prepare(`
       INSERT INTO request_logs (
-        id, project_id, api_key_id, model, 
+        id, project_id, gateway_key_id, model, 
         prompt_tokens, completion_tokens, total_tokens, 
         cost_usd, latency_ms, status_code, request_id, created_at
       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
     `).bind(
-            requestId, project.id, apiKey.id, targetModel,
+            requestId, project.id, gatewayKey.id, targetModel,
             promptTokens, completionTokens, promptTokens + completionTokens,
             cost, latency, statusCode, providerRequestId
         ).run();
 
-        // Update API Key usage stats
+        // Update Gateway Key usage stats
         await c.env.DB.prepare(`
-      UPDATE api_keys 
+      UPDATE gateway_keys 
       SET current_month_usage_usd = current_month_usage_usd + ?
       WHERE id = ?
-    `).bind(cost, apiKey.id).run();
+    `).bind(cost, gatewayKey.id).run();
 
     } catch (err) {
         console.error('[Gateway] [Logger] Failed to log request:', err);

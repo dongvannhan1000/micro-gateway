@@ -1,12 +1,12 @@
 import { Context, Next } from 'hono';
 import { Env, Variables } from '../types';
-import { hashApiKey } from '../utils/crypto';
-import { Project, ApiKey } from '@ms-gateway/db';
+import { hashGatewayKey } from '../utils/crypto';
+import { Project, GatewayKey } from '@ms-gateway/db';
 
 /**
  * Middleware to validate Gateway API Key for proxy requests
  */
-export async function apiKeyAuth(c: Context<{ Bindings: Env; Variables: Variables }>, next: Next) {
+export async function gatewayKeyAuth(c: Context<{ Bindings: Env; Variables: Variables }>, next: Next) {
     const authHeader = c.req.header('Authorization');
 
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
@@ -20,12 +20,12 @@ export async function apiKeyAuth(c: Context<{ Bindings: Env; Variables: Variable
     }
 
     const key = authHeader.split(' ')[1];
-    const hashedKey = await hashApiKey(key);
+    const hashedKey = await hashGatewayKey(key);
 
     try {
         const { results } = await c.env.DB.prepare(`
       SELECT k.*, p.id as p_id, p.user_id, p.name as p_name, p.model_aliases
-      FROM api_keys k
+      FROM gateway_keys k
       JOIN projects p ON k.project_id = p.id
       WHERE k.key_hash = ? AND k.status = 'active'
       LIMIT 1
@@ -43,8 +43,8 @@ export async function apiKeyAuth(c: Context<{ Bindings: Env; Variables: Variable
 
         const row = results[0] as any;
 
-        // Attach current API key and Project to context
-        const apiKey: ApiKey = {
+        // Attach current Gateway key and Project to context
+        const gatewayKey: GatewayKey = {
             id: row.id,
             project_id: row.project_id,
             key_hash: row.key_hash,
@@ -66,7 +66,7 @@ export async function apiKeyAuth(c: Context<{ Bindings: Env; Variables: Variable
             updated_at: row.created_at
         };
 
-        c.set('apiKey', apiKey);
+        c.set('gatewayKey', gatewayKey);
         c.set('project', project);
 
         await next();

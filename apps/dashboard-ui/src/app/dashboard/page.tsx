@@ -54,19 +54,19 @@ export default async function DashboardPage() {
                                     <span className="text-[10px] uppercase tracking-wider text-muted font-medium flex items-center gap-1">
                                         <Activity className="w-3 h-3" /> Req
                                     </span>
-                                    <span className="text-sm font-bold">0</span>
+                                    <span className="text-sm font-bold">{project.total_requests || 0}</span>
                                 </div>
                                 <div className="flex flex-col">
                                     <span className="text-[10px] uppercase tracking-wider text-muted font-medium flex items-center gap-1">
                                         <DollarSign className="w-3 h-3" /> Cost
                                     </span>
-                                    <span className="text-sm font-bold">$0.00</span>
+                                    <span className="text-sm font-bold">${(project.total_cost || 0).toFixed(4)}</span>
                                 </div>
                                 <div className="flex flex-col">
                                     <span className="text-[10px] uppercase tracking-wider text-muted font-medium flex items-center gap-1">
                                         <Clock className="w-3 h-3" /> Latency
                                     </span>
-                                    <span className="text-sm font-bold">0ms</span>
+                                    <span className="text-sm font-bold">{Math.round(project.avg_latency || 0)}ms</span>
                                 </div>
                             </div>
                         </Link>

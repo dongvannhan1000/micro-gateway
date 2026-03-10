@@ -6,9 +6,13 @@ export interface Project {
     model_aliases?: string; // JSON string: Record<string, string>
     created_at: string;
     updated_at: string;
+    // Aggregated stats
+    total_requests?: number;
+    total_cost?: number;
+    avg_latency?: number | null;
 }
 
-export interface ApiKey {
+export interface GatewayKey {
     id: string;
     project_id: string;
     key_hash: string;
@@ -33,7 +37,7 @@ export interface ProviderConfig {
 export interface RequestLog {
     id: string;
     project_id: string;
-    api_key_id: string;
+    gateway_key_id: string;
     model: string;
     prompt_tokens: number;
     completion_tokens: number;

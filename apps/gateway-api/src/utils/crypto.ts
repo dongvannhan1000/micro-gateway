@@ -2,7 +2,7 @@
  * Web Crypto utilities for Cloudflare Workers
  */
 
-export async function hashApiKey(key: string): Promise<string> {
+export async function hashGatewayKey(key: string): Promise<string> {
     const encoder = new TextEncoder();
     const data = encoder.encode(key);
     const hashBuffer = await crypto.subtle.digest('SHA-256', data);
@@ -10,7 +10,7 @@ export async function hashApiKey(key: string): Promise<string> {
     return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
 }
 
-export function generateApiKey(): string {
+export function generateGatewayKey(): string {
     const prefix = 'sk-gw-';
     const randomChars = Array.from(crypto.getRandomValues(new Uint8Array(24)))
         .map(b => b.toString(16).padStart(2, '0'))

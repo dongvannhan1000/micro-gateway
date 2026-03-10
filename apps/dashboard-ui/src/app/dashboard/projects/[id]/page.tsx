@@ -1,6 +1,6 @@
 import { createClient } from '@/utils/supabase/server';
 import { fetchGateway } from '@/utils/api';
-import { Project, ApiKey } from '@ms-gateway/db';
+import { Project, GatewayKey } from '@ms-gateway/db';
 import { NewKeyModal } from '@/components/NewKeyModal';
 import { RevokeKeyButton } from '@/components/RevokeKeyButton';
 import { ModelAliasingModal } from '@/components/ModelAliasingModal';
@@ -27,13 +27,13 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
     const token = session?.access_token;
 
     let project: Project | null = null;
-    let apiKeys: ApiKey[] = [];
+    let apiKeys: GatewayKey[] = [];
     let providerConfigs: any[] = [];
 
     if (token) {
         try {
             project = await fetchGateway(`/api/projects/${id}`, token);
-            apiKeys = await fetchGateway(`/api/projects/${id}/keys`, token);
+            apiKeys = await fetchGateway(`/api/projects/${id}/gateway-keys`, token);
             providerConfigs = await fetchGateway(`/api/projects/${id}/provider-configs`, token);
         } catch (e) {
             console.error('Failed to fetch data:', e);
@@ -77,9 +77,9 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
             {/* Stats Quick View */}
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                 {[
-                    { label: 'Requests (24h)', value: '0', icon: Activity, color: 'text-accent-blue' },
-                    { label: 'Total Cost', value: '$0.00', icon: DollarSign, color: 'text-green-400' },
-                    { label: 'Avg Latency', value: '0ms', icon: Clock, color: 'text-accent-violet' },
+                    { label: 'Requests (Total)', value: (project.total_requests || 0).toString(), icon: Activity, color: 'text-accent-blue' },
+                    { label: 'Total Cost', value: `$${(project.total_cost || 0).toFixed(4)}`, icon: DollarSign, color: 'text-green-400' },
+                    { label: 'Avg Latency', value: `${Math.round(project.avg_latency || 0)}ms`, icon: Clock, color: 'text-accent-violet' },
                     { label: 'Security Blocks', value: '0', icon: ShieldCheck, color: 'text-red-400' },
                 ].map((stat, i) => (
                     <div key={i} className="glass-card flex items-center gap-4 py-4">
@@ -99,7 +99,7 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
                 <div className="lg:col-span-2 space-y-4">
                     <div className="flex items-center justify-between">
                         <h2 className="text-xl font-bold flex items-center gap-2">
-                            <Key className="w-5 h-5 text-accent-blue" /> API Keys
+                            <Key className="w-5 h-5 text-accent-blue" /> Gateway Keys
                         </h2>
                     </div>
                     <div className="glass overflow-hidden">
@@ -123,7 +123,7 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
                                             <code className="bg-glass-bg px-2 py-1 rounded text-accent-blue text-xs">{key.key_hint}</code>
                                         </td>
                                         <td className="px-6 py-4">
-                                            <div className="text-sm font-bold">$0.00</div>
+                                            <div className="text-sm font-bold">${key.current_month_usage_usd.toFixed(4)}</div>
                                             <div className="text-[10px] text-muted">Limit: ${key.monthly_limit_usd.toFixed(2)}</div>
                                         </td>
                                         <td className="px-6 py-4 text-right">
@@ -133,7 +133,7 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
                                 )) : (
                                     <tr>
                                         <td colSpan={4} className="px-6 py-12 text-center text-muted text-sm">
-                                            No API keys created for this project.
+                                            No Gateway keys created for this project.
                                         </td>
                                     </tr>
                                 )}

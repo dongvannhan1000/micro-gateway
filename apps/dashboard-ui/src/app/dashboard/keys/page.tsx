@@ -12,7 +12,7 @@ export default async function GlobalApiKeysPage() {
 
     if (token) {
         try {
-            apiKeys = await fetchGateway('/api/keys', token);
+            apiKeys = await fetchGateway('/api/gateway-keys', token);
         } catch (e) {
             console.error('Failed to fetch keys:', e);
         }
@@ -26,7 +26,7 @@ export default async function GlobalApiKeysPage() {
         <div className="space-y-8 pb-12">
             <div className="flex items-center justify-between">
                 <div>
-                    <h1 className="text-3xl font-bold tracking-tight">Global API Keys</h1>
+                    <h1 className="text-3xl font-bold tracking-tight">Global Gateway Keys</h1>
                     <p className="text-muted mt-1">Manage all your MSGateway keys across all projects in one place.</p>
                 </div>
             </div>
@@ -74,7 +74,7 @@ export default async function GlobalApiKeysPage() {
                         )) : (
                             <tr>
                                 <td colSpan={4} className="px-6 py-12 text-center text-muted text-sm">
-                                    No API keys found. Create one within a project to get started.
+                                    No Gateway keys found. Create one within a project to get started.
                                 </td>
                             </tr>
                         )}

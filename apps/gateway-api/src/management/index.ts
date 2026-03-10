@@ -1,28 +1,28 @@
 import { Hono } from 'hono';
 import { Env, Variables } from '../types';
 import { sessionAuth } from '../middleware/session-auth';
-import { generateApiKey, hashApiKey } from '../utils/crypto';
+import { generateGatewayKey, hashGatewayKey } from '../utils/crypto';
 
 const management = new Hono<{ Bindings: Env; Variables: Variables }>();
 
 // All management routes require Supabase session authentication
 management.use('*', sessionAuth);
 
-// --- API Keys (Global) ---
+// --- Gateway Keys (Global) ---
 
-management.get('/keys', async (c) => {
+management.get('/gateway-keys', async (c) => {
     const user = c.get('user')!;
     try {
         const { results } = await c.env.DB.prepare(`
       SELECT k.id, k.name, k.key_hint, k.status, k.monthly_limit_usd, k.current_month_usage_usd, k.created_at, p.name as project_name, p.id as project_id
-      FROM api_keys k
+      FROM gateway_keys k
       JOIN projects p ON k.project_id = p.id
       WHERE p.user_id = ? AND k.status = 'active'
       ORDER BY k.created_at DESC
     `).bind(user.id).all();
         return c.json(results);
     } catch (err) {
-        return c.json({ error: 'Failed to fetch global keys' }, 500);
+        return c.json({ error: 'Failed to fetch global gateway keys' }, 500);
     }
 });
 
@@ -34,10 +34,20 @@ management.get('/projects', async (c) => {
     const user = c.get('user')!;
     try {
         const { results } = await c.env.DB.prepare(`
-            SELECT * FROM projects WHERE user_id = ? ORDER BY created_at DESC
+            SELECT 
+                p.*,
+                COUNT(r.id) as total_requests,
+                TOTAL(r.cost_usd) as total_cost,
+                AVG(r.latency_ms) as avg_latency
+            FROM projects p
+            LEFT JOIN request_logs r ON p.id = r.project_id
+            WHERE p.user_id = ?
+            GROUP BY p.id
+            ORDER BY p.created_at DESC
         `).bind(user.id).all();
         return c.json(results);
     } catch (err: any) {
+        console.error('[Management] Failed to fetch projects:', err);
         return c.json({ error: 'Failed' }, 500);
     }
 });
@@ -62,11 +72,20 @@ management.get('/projects/:id', async (c) => {
     const id = c.req.param('id');
     try {
         const project = await c.env.DB.prepare(`
-      SELECT * FROM projects WHERE id = ? AND user_id = ?
+      SELECT 
+        p.*,
+        COUNT(r.id) as total_requests,
+        TOTAL(r.cost_usd) as total_cost,
+        AVG(r.latency_ms) as avg_latency
+      FROM projects p
+      LEFT JOIN request_logs r ON p.id = r.project_id
+      WHERE p.id = ? AND p.user_id = ?
+      GROUP BY p.id
     `).bind(id, user.id).first();
         if (!project) return c.json({ error: 'Project not found' }, 404);
         return c.json(project);
     } catch (err) {
+        console.error('[Management] Failed to fetch project detail:', err);
         return c.json({ error: 'Failed' }, 500);
     }
 });
@@ -147,27 +166,26 @@ management.post('/projects/:id/provider-configs', async (c) => {
     }
 });
 
-// --- API Keys ---
+// --- Gateway Keys ---
 
-management.get('/projects/:id/keys', async (c) => {
-    // ... (rest of the file)
+management.get('/projects/:id/gateway-keys', async (c) => {
     const user = c.get('user')!;
     const projectId = c.req.param('id');
 
     try {
         const { results } = await c.env.DB.prepare(`
       SELECT k.id, k.name, k.key_hint, k.status, k.monthly_limit_usd, k.current_month_usage_usd, k.created_at
-      FROM api_keys k
+      FROM gateway_keys k
       JOIN projects p ON k.project_id = p.id
       WHERE k.project_id = ? AND p.user_id = ? AND k.status = 'active'
     `).bind(projectId, user.id).all();
         return c.json(results);
     } catch (err) {
-        return c.json({ error: 'Failed' }, 500);
+        return c.json({ error: 'Failed to fetch project keys' }, 500);
     }
 });
 
-management.post('/projects/:id/keys', async (c) => {
+management.post('/projects/:id/gateway-keys', async (c) => {
     const user = c.get('user')!;
     const projectId = c.req.param('id');
     const { name, monthly_limit_usd } = await c.req.json();
@@ -179,14 +197,14 @@ management.post('/projects/:id/keys', async (c) => {
 
     if (!project) return c.json({ error: 'Unauthorized' }, 403);
 
-    const rawKey = generateApiKey();
-    const hashedKey = await hashApiKey(rawKey);
+    const rawKey = generateGatewayKey();
+    const hashedKey = await hashGatewayKey(rawKey);
     const keyHint = `${rawKey.slice(0, 10)}...${rawKey.slice(-4)}`;
     const keyId = crypto.randomUUID();
 
     try {
         await c.env.DB.prepare(`
-      INSERT INTO api_keys (id, project_id, key_hash, key_hint, name, monthly_limit_usd)
+      INSERT INTO gateway_keys (id, project_id, key_hash, key_hint, name, monthly_limit_usd)
       VALUES (?, ?, ?, ?, ?, ?)
     `).bind(keyId, projectId, hashedKey, keyHint, name, monthly_limit_usd || 0).run();
 
@@ -197,17 +215,17 @@ management.post('/projects/:id/keys', async (c) => {
             key_hint: keyHint
         }, 201);
     } catch (err) {
-        return c.json({ error: 'Failed' }, 500);
+        return c.json({ error: 'Failed to generate key' }, 500);
     }
 });
 
-management.delete('/projects/:projectId/keys/:keyId', async (c) => {
+management.delete('/projects/:projectId/gateway-keys/:keyId', async (c) => {
     const user = c.get('user')!;
     const { projectId, keyId } = c.req.param();
 
     try {
         const result = await c.env.DB.prepare(`
-      UPDATE api_keys
+      UPDATE gateway_keys
       SET status = 'revoked', revoked_at = CURRENT_TIMESTAMP
       WHERE id = ? AND project_id = (SELECT id FROM projects WHERE id = ? AND user_id = ?)
     `).bind(keyId, projectId, user.id).run();
@@ -215,7 +233,7 @@ management.delete('/projects/:projectId/keys/:keyId', async (c) => {
         if (result.meta.changes === 0) return c.json({ error: 'Not found' }, 404);
         return c.json({ success: true });
     } catch (err) {
-        return c.json({ error: 'Failed' }, 500);
+        return c.json({ error: 'Failed to revoke key' }, 500);
     }
 });
 

@@ -24,7 +24,7 @@ function cn(...inputs: ClassValue[]) {
 
 const navItems = [
     { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
-    { name: 'API Keys', href: '/dashboard/keys', icon: Key },
+    { name: 'Gateway Keys', href: '/dashboard/keys', icon: Key },
     { name: 'Security', href: '/dashboard/security', icon: ShieldCheck },
     { name: 'Analytics', href: '/dashboard/analytics', icon: BarChart3 },
     { name: 'Settings', href: '/dashboard/settings', icon: Settings },

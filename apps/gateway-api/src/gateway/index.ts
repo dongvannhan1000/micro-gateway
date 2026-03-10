@@ -1,13 +1,13 @@
 import { Hono } from 'hono';
 import { Env, Variables } from '../types';
-import { apiKeyAuth } from '../middleware/api-key-auth';
+import { gatewayKeyAuth } from '../middleware/api-key-auth';
 import { rateLimiter } from '../middleware/rate-limiter';
 import { proxyHandler } from './proxy';
 
 const gateway = new Hono<{ Bindings: Env; Variables: Variables }>();
 
-// All /v1 requests require API Key and are rate limited
-gateway.use('*', apiKeyAuth);
+// All /v1 requests require Gateway Key and are rate limited
+gateway.use('*', gatewayKeyAuth);
 gateway.use('*', rateLimiter);
 
 gateway.post('/chat/completions', proxyHandler);

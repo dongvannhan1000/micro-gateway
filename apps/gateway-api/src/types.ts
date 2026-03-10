@@ -1,4 +1,4 @@
-import { Project, ApiKey } from '@ms-gateway/db';
+import { Project, GatewayKey } from '@ms-gateway/db';
 
 export interface Env {
     DB: D1Database;
@@ -15,5 +15,5 @@ export interface Variables {
         email?: string;
     };
     project?: Project;
-    apiKey?: ApiKey;
+    gatewayKey?: GatewayKey;
 }

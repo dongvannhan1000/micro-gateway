@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { revokeApiKey } from '@/app/dashboard/actions';
+import { revokeGatewayKey } from '@/app/dashboard/actions';
 import { Trash2, Loader2, AlertTriangle } from 'lucide-react';
 import { Modal } from './Modal';
 
@@ -11,7 +11,7 @@ export function RevokeKeyButton({ projectId, keyId, keyName }: { projectId: stri
 
     const handleRevoke = async () => {
         setIsPending(true);
-        await revokeApiKey(projectId, keyId);
+        await revokeGatewayKey(projectId, keyId);
         setIsOpen(false);
         setIsPending(false);
     };
@@ -25,7 +25,7 @@ export function RevokeKeyButton({ projectId, keyId, keyName }: { projectId: stri
                 <Trash2 className="w-4 h-4" />
             </button>
 
-            <Modal isOpen={isOpen} onClose={() => setIsOpen(false)} title="Revoke API Key">
+            <Modal isOpen={isOpen} onClose={() => setIsOpen(false)} title="Revoke Gateway Key">
                 <div className="space-y-6">
                     <div className="flex items-start gap-4 p-4 bg-red-400/5 border border-red-400/20 rounded-xl">
                         <AlertTriangle className="w-6 h-6 text-red-400 shrink-0" />
@@ -49,7 +49,7 @@ export function RevokeKeyButton({ projectId, keyId, keyName }: { projectId: stri
                             disabled={isPending}
                             className="flex-1 bg-red-500 hover:bg-red-600 text-white py-2.5 rounded-lg text-sm font-medium transition-all disabled:opacity-50 flex items-center justify-center"
                         >
-                            {isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Revoke Key'}
+                            {isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Revoke Gateway Key'}
                         </button>
                     </div>
                 </div>
