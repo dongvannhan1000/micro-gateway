@@ -1,4 +1,5 @@
 import { Shield, Zap, DollarSign, Activity } from "lucide-react";
+import Link from "next/link";
 
 export default function Home() {
   return (
@@ -18,12 +19,12 @@ export default function Home() {
         </p>
 
         <div className="flex gap-4 justify-center">
-          <button className="bg-neon-gradient text-white font-semibold px-6 py-3 rounded-xl hover:opacity-90 transition-opacity cursor-pointer">
+          <Link href="/login" className="bg-neon-gradient text-white font-semibold px-6 py-3 rounded-xl hover:opacity-90 transition-opacity cursor-pointer">
             Get Started
-          </button>
-          <button className="glass text-foreground font-semibold px-6 py-3 rounded-xl hover:bg-glass-bg transition-colors cursor-pointer">
+          </Link>
+          <Link href="https://docs.example.com" target="_blank" className="glass text-foreground font-semibold px-6 py-3 rounded-xl hover:bg-glass-bg transition-colors cursor-pointer">
             View Docs
-          </button>
+          </Link>
         </div>
       </div>
 

@@ -14,5 +14,5 @@ id = "736bbb8ca70144609f4c411ed9a414d4"
 
 [vars]
 ENVIRONMENT = "development"
-SUPABASE_URL = "https://your-project.supabase.co"
+SUPABASE_URL = "https://yyfwepdlvcubthmeldir.supabase.co"
 # SUPABASE_JWT_SECRET will be added as a secret via wrangler secret put

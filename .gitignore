@@ -1,7 +1,34 @@
+# Dependencies
+node_modules
+.pnpm-store
+
+# Environment / Secrets (CRITICAL)
+.env
+.env.local
+.env.*.local
+.dev.vars
+
+# Build / Output
+.next
+dist
+build
+.wrangler
+.turbo
+
+# Logs
+lerna-debug.log*
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+*.log
+
+# Misc
+.DS_Store
+.vscode
+.idea
+
+# Project Docs (Ignore if you want to keep them only local)
 docs
 project-status
-reseach
-node_modules
-.env
-.wrangler
+research
 TESTING.md
