@@ -116,3 +116,24 @@ body {
 .animate-fade-in {
   animation: fade-in 0.5s ease-out forwards;
 }
+
+/* ═══════════════════════════════════════════════════════
+   Utilities & Custom Scrollbar
+   ═══════════════════════════════════════════════════════ */
+
+.custom-scrollbar::-webkit-scrollbar {
+  width: 6px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: var(--glass-border);
+  border-radius: 10px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: var(--muted);
+}

@@ -1,0 +1,181 @@
+import { Context } from 'hono';
+import { Env, Variables } from '../types';
+import { openAiError } from './errors';
+import { calculateCost } from '@ms-gateway/db';
+import { decryptProviderKey } from '../utils/crypto';
+
+const GEMINI_OPENAI_BASE_URL = 'https://generativelanguage.googleapis.com/v1beta/openai/';
+
+export async function proxyHandler(c: Context<{ Bindings: Env; Variables: Variables }>) {
+    const project = c.get('project');
+    const apiKey = c.get('apiKey');
+
+    if (!project || !apiKey) {
+        return openAiError(c, 'Missing project or API key context', 'server_error', null, 500);
+    }
+
+    const body = await c.req.json();
+    const requestedModel = body.model;
+
+    if (!requestedModel) {
+        return openAiError(c, 'Missing model parameter', 'invalid_request_error', 'missing_model');
+    }
+
+    // 1. Model Aliasing Logic
+    let targetModel = requestedModel;
+    if (project.model_aliases) {
+        try {
+            const aliases = JSON.parse(project.model_aliases);
+            targetModel = aliases[requestedModel] || requestedModel;
+            console.log(`[Gateway] [Proxy] Aliasing: ${requestedModel} -> ${targetModel}`);
+        } catch (e) {
+            console.error('[Gateway] [Proxy] Error parsing aliases:', e);
+        }
+    }
+
+    // 2. Resolve Provider & Key
+    // Default to Gemini for Sprint 1 if no OpenAI key is configured
+    let targetBaseUrl = GEMINI_OPENAI_BASE_URL;
+    let providerKey = '';
+
+    try {
+        const { results } = await c.env.DB.prepare(`
+      SELECT * FROM provider_configs WHERE project_id = ? AND is_default = 1 LIMIT 1
+    `).bind(project.id).all();
+
+        if (results && results.length > 0) {
+            const config = results[0] as any;
+            providerKey = await decryptProviderKey(config.api_key_encrypted, c.env.ENCRYPTION_SECRET);
+
+            if (config.provider === 'openai') {
+                targetBaseUrl = 'https://api.openai.com/v1/';
+            }
+        } else {
+            // Fallback or error if no provider configured
+            // For now, if we have a GEMINI_API_KEY secret, we use it as fallback
+            // Ideally, every project must have a provider_config
+            return openAiError(c, 'No AI provider configured for this project', 'invalid_request_error', 'no_provider_config');
+        }
+    } catch (err) {
+        console.error('[Gateway] [Proxy] Provider lookup error:', err);
+        return openAiError(c, 'Internal Server Error', 'server_error', null, 500);
+    }
+
+    // 3. Prepare Forward Request
+    const forwardUrl = new URL(c.req.path.replace(/^\/v1/, ''), targetBaseUrl).toString();
+    const headers = new Headers(c.req.header());
+    headers.set('Authorization', `Bearer ${providerKey}`);
+    headers.delete('host'); // Let Cloudflare set the correct host
+
+    const forwardRequest = new Request(forwardUrl, {
+        method: c.req.method,
+        headers,
+        body: JSON.stringify({ ...body, model: targetModel }),
+    });
+
+    const startTime = Date.now();
+
+    try {
+        const response = await fetch(forwardRequest);
+        const latency = Date.now() - startTime;
+
+        // 4. Handle Streaming
+        if (body.stream) {
+            // Passthrough SSE stream
+            const { readable, writable } = new TransformStream();
+            const writer = writable.getWriter();
+            const reader = response.body?.getReader();
+
+            if (reader) {
+                c.executionCtx.waitUntil((async () => {
+                    let totalCompletionTokens = 0; // Estimation for stream if usage is not provided
+                    while (true) {
+                        const { done, value } = await reader.read();
+                        if (done) break;
+                        await writer.write(value);
+                        // In a real implementation, we would parse chunks to find the final usage info
+                    }
+                    await writer.close();
+
+                    // Log request (Simplified for streaming in Sprint 1)
+                    await logRequest(c, requestedModel, targetModel, 200, latency, 0, 0);
+                })());
+            }
+
+            return new Response(readable, {
+                status: response.status,
+                headers: {
+                    ...Object.fromEntries(response.headers),
+                    'X-MS-Latency-MS': latency.toString(),
+                }
+            });
+        }
+
+        // 5. Handle Non-Streaming
+        const resData = await response.json() as any;
+        const usage = resData.usage || { prompt_tokens: 0, completion_tokens: 0, total_tokens: 0 };
+        const cost = calculateCost(targetModel, usage.prompt_tokens, usage.completion_tokens);
+
+        // Log request asynchronously
+        c.executionCtx.waitUntil(logRequest(
+            c,
+            requestedModel,
+            targetModel,
+            response.status,
+            latency,
+            usage.prompt_tokens,
+            usage.completion_tokens,
+            cost,
+            resData.id
+        ));
+
+        return c.json(resData, response.status as any, {
+            'X-MS-Latency-MS': latency.toString(),
+            'X-MS-Cost-USD': cost.toFixed(6)
+        });
+
+    } catch (err) {
+        console.error('[Gateway] [Proxy] Fetch error:', err);
+        return openAiError(c, 'Failed to connect to AI provider', 'server_error', null, 502);
+    }
+}
+
+async function logRequest(
+    c: Context<{ Bindings: Env; Variables: Variables }>,
+    requestedModel: string,
+    targetModel: string,
+    statusCode: number,
+    latency: number,
+    promptTokens: number,
+    completionTokens: number,
+    cost: number = 0,
+    providerRequestId: string = ''
+) {
+    const project = c.get('project')!;
+    const apiKey = c.get('apiKey')!;
+    const requestId = crypto.randomUUID();
+
+    try {
+        await c.env.DB.prepare(`
+      INSERT INTO request_logs (
+        id, project_id, api_key_id, model, 
+        prompt_tokens, completion_tokens, total_tokens, 
+        cost_usd, latency_ms, status_code, request_id, created_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+    `).bind(
+            requestId, project.id, apiKey.id, targetModel,
+            promptTokens, completionTokens, promptTokens + completionTokens,
+            cost, latency, statusCode, providerRequestId
+        ).run();
+
+        // Update API Key usage stats
+        await c.env.DB.prepare(`
+      UPDATE api_keys 
+      SET current_month_usage_usd = current_month_usage_usd + ?
+      WHERE id = ?
+    `).bind(cost, apiKey.id).run();
+
+    } catch (err) {
+        console.error('[Gateway] [Logger] Failed to log request:', err);
+    }
+}

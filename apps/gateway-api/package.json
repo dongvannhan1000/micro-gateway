@@ -10,7 +10,9 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "hono": "^4.0.0"
+    "@ms-gateway/db": "^1.0.0",
+    "hono": "^4.0.0",
+    "jose": "^5.10.0"
   },
   "devDependencies": {
     "@cloudflare/workers-types": "^4.20240222.0",

@@ -3,3 +3,5 @@ project-status
 reseach
 node_modules
 .env
+.wrangler
+TESTING.md

@@ -1,0 +1,18 @@
+{
+    "name": "@ms-gateway/db",
+    "version": "1.0.0",
+    "description": "Shared database types and migrations for Micro-Security Gateway",
+    "private": true,
+    "main": "src/index.ts",
+    "module": "src/index.ts",
+    "type": "module",
+    "scripts": {
+        "migrate:local": "wrangler d1 migrations apply ms-gateway-db --local",
+        "migrate:remote": "wrangler d1 migrations apply ms-gateway-db --remote"
+    },
+    "devDependencies": {
+        "@vitest/coverage-v8": "^4.0.18",
+        "vitest": "^4.0.18",
+        "wrangler": "^4.71.0"
+    }
+}
