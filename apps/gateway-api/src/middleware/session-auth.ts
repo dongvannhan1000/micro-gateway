@@ -10,10 +10,10 @@ let jwks: any = null;
 export async function sessionAuth(c: Context<{ Bindings: Env; Variables: Variables }>, next: Next) {
     const authHeader = c.req.header('Authorization');
 
-    console.log(`[Nest] [GatewayService] Action: sessionAuth start (Metadata: hasHeader=${!!authHeader})`);
+    console.log(`[GatewayService] Action: sessionAuth start (Metadata: hasHeader=${!!authHeader})`);
 
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
-        console.warn(`[Nest] [GatewayService] Action: sessionAuth failed (Metadata: reason=missing_token)`);
+        console.warn(`[GatewayService] Action: sessionAuth failed (Metadata: reason=missing_token)`);
         return c.json({ error: 'Unauthorized: Missing or invalid token' }, 401);
     }
 
@@ -21,11 +21,11 @@ export async function sessionAuth(c: Context<{ Bindings: Env; Variables: Variabl
 
     try {
         const header = decodeProtectedHeader(token);
-        console.log(`[Nest] [GatewayService] Action: decoding_token (Metadata: alg=${header.alg})`);
+        console.log(`[GatewayService] Action: decoding_token (Metadata: alg=${header.alg})`);
 
         let payload;
         if (header.alg === 'HS256') {
-            console.log(`[Nest] [GatewayService] Action: verifying_hs256`);
+            console.log(`[GatewayService] Action: verifying_hs256`);
             const secret = new TextEncoder().encode(c.env.SUPABASE_JWT_SECRET);
             const result = await jwtVerify(token, secret);
             payload = result.payload;
@@ -49,7 +49,7 @@ export async function sessionAuth(c: Context<{ Bindings: Env; Variables: Variabl
             throw new Error('Invalid payload: sub field missing');
         }
 
-        console.log(`[Nest] [GatewayService] Action: sessionAuth success (Metadata: userId=${payload.sub})`);
+        console.log(`[GatewayService] Action: sessionAuth success (Metadata: userId=${payload.sub})`);
 
         c.set('user', {
             id: payload.sub as string,
@@ -58,7 +58,7 @@ export async function sessionAuth(c: Context<{ Bindings: Env; Variables: Variabl
 
         await next();
     } catch (err: any) {
-        console.error(`[Nest] [GatewayService] Action: sessionAuth error (Metadata: message=${err.message})`);
+        console.error(`[GatewayService] Action: sessionAuth error (Metadata: message=${err.message})`);
         console.error(err.stack);
         return c.json({
             error: 'Authentication failed',

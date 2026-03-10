@@ -12,17 +12,17 @@ management.use('*', sessionAuth);
 
 management.get('/projects', async (c) => {
     const user = c.get('user')!;
-    console.log(`[Nest] [GatewayService] Action: fetch_projects_start (Metadata: userId=${user.id})`);
+    console.log(`[GatewayService] Action: fetch_projects_start (Metadata: userId=${user.id})`);
 
     try {
         const { results } = await c.env.DB.prepare(`
             SELECT * FROM projects WHERE user_id = ? ORDER BY created_at DESC
         `).bind(user.id).all();
 
-        console.log(`[Nest] [GatewayService] Action: fetch_projects_success (Metadata: count=${results?.length || 0})`);
+        console.log(`[GatewayService] Action: fetch_projects_success (Metadata: count=${results?.length || 0})`);
         return c.json(results);
     } catch (err: any) {
-        console.error(`[Nest] [GatewayService] Action: fetch_projects_error (Metadata: message=${err.message})`);
+        console.error(`[GatewayService] Action: fetch_projects_error (Metadata: message=${err.message})`);
         console.error(err.stack);
         return c.json({ error: 'Failed to fetch projects', details: err.message }, 500);
     }
