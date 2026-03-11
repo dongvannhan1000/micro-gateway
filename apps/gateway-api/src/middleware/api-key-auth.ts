@@ -64,6 +64,8 @@ export async function gatewayKeyAuth(c: Context<{ Bindings: Env; Variables: Vari
             status: row.status,
             monthly_limit_usd: row.monthly_limit_usd,
             current_month_usage_usd: row.current_month_usage_usd,
+            rate_limit_per_min: row.rate_limit_per_min,
+            rate_limit_per_day: row.rate_limit_per_day,
             created_at: row.created_at,
             revoked_at: row.revoked_at
         };

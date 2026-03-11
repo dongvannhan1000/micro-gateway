@@ -21,6 +21,8 @@ export interface GatewayKey {
     status: 'active' | 'revoked';
     monthly_limit_usd: number;
     current_month_usage_usd: number;
+    rate_limit_per_min: number;
+    rate_limit_per_day: number;
     created_at: string;
     revoked_at?: string;
 }

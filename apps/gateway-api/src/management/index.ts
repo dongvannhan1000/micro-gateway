@@ -19,7 +19,7 @@ management.get('/gateway-keys', async (c) => {
     const user = c.get('user')!;
     try {
         const { results } = await c.env.DB.prepare(`
-      SELECT k.id, k.name, k.key_hint, k.status, k.monthly_limit_usd, k.current_month_usage_usd, k.created_at, p.name as project_name, p.id as project_id
+      SELECT k.id, k.name, k.key_hint, k.status, k.monthly_limit_usd, k.current_month_usage_usd, k.rate_limit_per_min, k.rate_limit_per_day, k.created_at, p.name as project_name, p.id as project_id
       FROM gateway_keys k
       JOIN projects p ON k.project_id = p.id
       WHERE p.user_id = ? AND k.status = 'active'
@@ -179,7 +179,7 @@ management.get('/projects/:id/gateway-keys', async (c) => {
 
     try {
         const { results } = await c.env.DB.prepare(`
-      SELECT k.id, k.name, k.key_hint, k.status, k.monthly_limit_usd, k.current_month_usage_usd, k.created_at
+      SELECT k.id, k.name, k.key_hint, k.status, k.monthly_limit_usd, k.current_month_usage_usd, k.rate_limit_per_min, k.rate_limit_per_day, k.created_at
       FROM gateway_keys k
       JOIN projects p ON k.project_id = p.id
       WHERE k.project_id = ? AND p.user_id = ? AND k.status = 'active'
@@ -193,7 +193,7 @@ management.get('/projects/:id/gateway-keys', async (c) => {
 management.post('/projects/:id/gateway-keys', async (c) => {
     const user = c.get('user')!;
     const projectId = c.req.param('id');
-    const { name, monthly_limit_usd } = await c.req.json();
+    const { name, monthly_limit_usd, rate_limit_per_min, rate_limit_per_day } = await c.req.json();
 
     // Verify project ownership
     const project = await c.env.DB.prepare(`
@@ -209,9 +209,18 @@ management.post('/projects/:id/gateway-keys', async (c) => {
 
     try {
         await c.env.DB.prepare(`
-      INSERT INTO gateway_keys (id, project_id, key_hash, key_hint, name, monthly_limit_usd)
-      VALUES (?, ?, ?, ?, ?, ?)
-    `).bind(keyId, projectId, hashedKey, keyHint, name, monthly_limit_usd || 0).run();
+      INSERT INTO gateway_keys (id, project_id, key_hash, key_hint, name, monthly_limit_usd, rate_limit_per_min, rate_limit_per_day)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    `).bind(
+            keyId,
+            projectId,
+            hashedKey,
+            keyHint,
+            name,
+            monthly_limit_usd || 0,
+            rate_limit_per_min || 60,
+            rate_limit_per_day || 10000
+        ).run();
 
         return c.json({
             id: keyId,

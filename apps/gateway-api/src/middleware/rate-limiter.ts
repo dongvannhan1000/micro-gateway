@@ -8,20 +8,48 @@ export async function rateLimiter(c: Context<{ Bindings: Env; Variables: Variabl
     const gatewayKey = c.get('gatewayKey');
     if (!gatewayKey) return next();
 
-    // Simple fixed-window counter per minute
     const now = new Date();
-    const minuteBucket = `${now.getFullYear()}-${now.getMonth()}-${now.getDate()}-${now.getHours()}-${now.getMinutes()}`;
-    const kvKey = `rl:${gatewayKey.id}:${minuteBucket}`;
+
+    // 1. Per-minute limit
+    const minBucket = `${now.getFullYear()}-${now.getMonth()}-${now.getDate()}-${now.getHours()}-${now.getMinutes()}`;
+    const minKey = `rl:min:${gatewayKey.id}:${minBucket}`;
+
+    // 2. Per-day limit
+    const dayBucket = `${now.getFullYear()}-${now.getMonth()}-${now.getDate()}`;
+    const dayKey = `rl:day:${gatewayKey.id}:${dayBucket}`;
+
+    const minLimit = gatewayKey.rate_limit_per_min || 60;
+    const dayLimit = gatewayKey.rate_limit_per_day || 10000;
 
     try {
-        const countStr = await c.env.RATE_LIMIT_KV.get(kvKey);
-        const count = countStr ? parseInt(countStr) : 0;
+        // Fetch both counters in parallel
+        const [minCountStr, dayCountStr] = await Promise.all([
+            c.env.RATE_LIMIT_KV.get(minKey),
+            c.env.RATE_LIMIT_KV.get(dayKey)
+        ]);
 
-        // Hardcoded default for Sprint 1: 60 req/min
-        const limit = 60;
+        const minCount = minCountStr ? parseInt(minCountStr) : 0;
+        const dayCount = dayCountStr ? parseInt(dayCountStr) : 0;
 
-        if (count >= limit) {
-            console.warn(`[Gateway] [RateLimiter] Limit hit for key ${gatewayKey.id} (${count}/${limit})`);
+        // Check Day Limit first
+        if (dayCount >= dayLimit) {
+            console.warn(`[Gateway] [RateLimiter] Day limit hit for key ${gatewayKey.id} (${dayCount}/${dayLimit})`);
+            return c.json({
+                error: {
+                    message: 'Daily rate limit exceeded. Please try again tomorrow.',
+                    type: 'requests',
+                    code: 'daily_rate_limit_exceeded'
+                }
+            }, 429, {
+                'X-RateLimit-Limit-Day': dayLimit.toString(),
+                'X-RateLimit-Remaining-Day': '0',
+                'Retry-After': (86400 - (now.getHours() * 3600 + now.getMinutes() * 60 + now.getSeconds())).toString()
+            });
+        }
+
+        // Check Minute Limit
+        if (minCount >= minLimit) {
+            console.warn(`[Gateway] [RateLimiter] Minute limit hit for key ${gatewayKey.id} (${minCount}/${minLimit})`);
             return c.json({
                 error: {
                     message: 'Rate limit exceeded. Please try again later.',
@@ -29,22 +57,27 @@ export async function rateLimiter(c: Context<{ Bindings: Env; Variables: Variabl
                     code: 'rate_limit_exceeded'
                 }
             }, 429, {
-                'X-RateLimit-Limit': limit.toString(),
+                'X-RateLimit-Limit': minLimit.toString(),
                 'X-RateLimit-Remaining': '0',
-                'X-RateLimit-Reset': (60 - now.getSeconds()).toString()
+                'X-RateLimit-Reset': (60 - now.getSeconds()).toString(),
+                'Retry-After': (60 - now.getSeconds()).toString()
             });
         }
 
-        // Increment counter (async, don't block)
-        c.executionCtx.waitUntil(c.env.RATE_LIMIT_KV.put(kvKey, (count + 1).toString(), { expirationTtl: 120 }));
+        // Increment both counters (async)
+        c.executionCtx.waitUntil(Promise.all([
+            c.env.RATE_LIMIT_KV.put(minKey, (minCount + 1).toString(), { expirationTtl: 120 }),
+            c.env.RATE_LIMIT_KV.put(dayKey, (dayCount + 1).toString(), { expirationTtl: 172800 }) // 2 days to be safe
+        ]));
 
-        c.header('X-RateLimit-Limit', limit.toString());
-        c.header('X-RateLimit-Remaining', (limit - count - 1).toString());
+        c.header('X-RateLimit-Limit', minLimit.toString());
+        c.header('X-RateLimit-Remaining', (minLimit - minCount - 1).toString());
+        c.header('X-RateLimit-Limit-Day', dayLimit.toString());
+        c.header('X-RateLimit-Remaining-Day', (dayLimit - dayCount - 1).toString());
 
         await next();
     } catch (err) {
         console.error('[Gateway] [RateLimiter] KV Error:', err);
-        // Fail open in case of KV issues (priority: availability)
         await next();
     }
 }
