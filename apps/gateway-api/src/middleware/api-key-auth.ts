@@ -25,17 +25,12 @@ export async function gatewayKeyAuth(c: Context<{ Bindings: Env; Variables: Vari
     await new Promise(resolve => setTimeout(resolve, 5));
     
     const hashedKey = await hashGatewayKey(key);
+    const repos = c.get('repos')!;
 
     try {
-        const { results } = await c.env.DB.prepare(`
-      SELECT k.*, p.id as p_id, p.user_id, p.name as p_name, p.model_aliases
-      FROM gateway_keys k
-      JOIN projects p ON k.project_id = p.id
-      WHERE k.key_hash = ? AND k.status = 'active'
-      LIMIT 1
-    `).bind(hashedKey).all();
+        const row = await repos.gatewayKey.findByKeyHash(hashedKey);
 
-        if (!results || results.length === 0) {
+        if (!row) {
             return c.json({
                 error: {
                     message: 'Invalid or revoked API Key',
@@ -44,8 +39,6 @@ export async function gatewayKeyAuth(c: Context<{ Bindings: Env; Variables: Vari
                 }
             }, 401);
         }
-
-        const row = results[0] as any;
 
         // Enforcement: Check if monthly limit is exceeded
         if (row.monthly_limit_usd > 0 && row.current_month_usage_usd >= row.monthly_limit_usd) {

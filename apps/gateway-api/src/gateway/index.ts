@@ -20,14 +20,12 @@ gateway.post('/embeddings', proxyHandler);
 
 gateway.get('/models', async (c) => {
     const project = c.get('project');
+    const repos = c.get('repos')!;
     if (!project) return c.json({ object: 'list', data: [] });
 
     try {
-        const { results: configs } = await c.env.DB.prepare(`
-            SELECT provider FROM provider_configs WHERE project_id = ?
-        `).bind(project.id).all();
-
-        const providers = new Set(configs.map((f: any) => f.provider));
+        const providerList = await repos.providerConfig.findProvidersByProject(project.id);
+        const providers = new Set(providerList);
         const allModels = [];
 
         if (providers.has('google')) {

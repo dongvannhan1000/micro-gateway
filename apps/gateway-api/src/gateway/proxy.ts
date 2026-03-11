@@ -10,6 +10,7 @@ const GEMINI_OPENAI_BASE_URL = 'https://generativelanguage.googleapis.com/v1beta
 export async function proxyHandler(c: Context<{ Bindings: Env; Variables: Variables }>) {
     const project = c.get('project');
     const gatewayKey = c.get('gatewayKey');
+    const repos = c.get('repos')!;
 
     if (!project || !gatewayKey) {
         return openAiError(c, 'Missing project or Gateway key context', 'server_error', null, 500);
@@ -43,9 +44,7 @@ export async function proxyHandler(c: Context<{ Bindings: Env; Variables: Variab
     let providerName = '';
 
     try {
-        const { results: configs } = await c.env.DB.prepare(`
-            SELECT * FROM provider_configs WHERE project_id = ?
-        `).bind(project.id).all();
+        const configs = await repos.providerConfig.findAllByProject(project.id);
 
         if (!configs || configs.length === 0) {
             return openAiError(c, 'No AI providers configured for this project', 'invalid_request_error', 'no_provider_config');
@@ -85,7 +84,6 @@ export async function proxyHandler(c: Context<{ Bindings: Env; Variables: Variab
     console.log(`[Gateway] [Proxy] Target: ${providerName} | URL: ${forwardUrl}`);
 
     // Only send clean headers to provider - do NOT forward original headers
-    // Forwarding original headers (host, content-length, etc.) causes routing errors
     const forwardBody = JSON.stringify({ ...body, model: targetModel });
     const forwardRequest = new Request(forwardUrl, {
         method: c.req.method,
@@ -111,17 +109,15 @@ export async function proxyHandler(c: Context<{ Bindings: Env; Variables: Variab
 
             if (reader) {
                 c.executionCtx.waitUntil((async () => {
-                    let totalCompletionTokens = 0; // Estimation for stream if usage is not provided
                     while (true) {
                         const { done, value } = await reader.read();
                         if (done) break;
                         await writer.write(value);
-                        // In a real implementation, we would parse chunks to find the final usage info
                     }
                     await writer.close();
 
                     // Log request (Simplified for streaming in Sprint 1)
-                    await logRequest(c, requestedModel, targetModel, 200, latency, 0, 0);
+                    await logRequest(repos, project.id, gatewayKey.id, requestedModel, targetModel, 200, latency, 0, 0);
 
                     // Check alerts
                     const { checkAlerts } = await import('../services/alert-engine');
@@ -162,7 +158,9 @@ export async function proxyHandler(c: Context<{ Bindings: Env; Variables: Variab
         // Log request and check alerts asynchronously
         c.executionCtx.waitUntil((async () => {
             await logRequest(
-                c,
+                repos,
+                project.id,
+                gatewayKey.id,
                 requestedModel,
                 targetModel,
                 response.status,
@@ -173,6 +171,9 @@ export async function proxyHandler(c: Context<{ Bindings: Env; Variables: Variab
                 resData.id,
                 injectionScore
             );
+
+            // Update gateway key usage
+            await repos.gatewayKey.addUsage(gatewayKey.id, cost);
 
             const { checkAlerts } = await import('../services/alert-engine');
             await checkAlerts(c, project.id, cost);
@@ -190,7 +191,9 @@ export async function proxyHandler(c: Context<{ Bindings: Env; Variables: Variab
 }
 
 async function logRequest(
-    c: Context<{ Bindings: Env; Variables: Variables }>,
+    repos: NonNullable<Variables['repos']>,
+    projectId: string,
+    gatewayKeyId: string,
     requestedModel: string,
     targetModel: string,
     statusCode: number,
@@ -201,30 +204,23 @@ async function logRequest(
     providerRequestId: string = '',
     injectionScore: number = 0
 ) {
-    const project = c.get('project')!;
-    const gatewayKey = c.get('gatewayKey')!;
     const requestId = crypto.randomUUID();
 
     try {
-        await c.env.DB.prepare(`
-      INSERT INTO request_logs (
-        id, project_id, gateway_key_id, model, 
-        prompt_tokens, completion_tokens, total_tokens, 
-        cost_usd, latency_ms, status_code, prompt_injection_score, request_id, created_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
-    `).bind(
-            requestId, project.id, gatewayKey.id, targetModel,
-            promptTokens, completionTokens, promptTokens + completionTokens,
-            cost, latency, statusCode, injectionScore, providerRequestId
-        ).run();
-
-        // Update Gateway Key usage stats
-        await c.env.DB.prepare(`
-      UPDATE gateway_keys 
-      SET current_month_usage_usd = current_month_usage_usd + ?
-      WHERE id = ?
-    `).bind(cost, gatewayKey.id).run();
-
+        await repos.requestLog.create({
+            id: requestId,
+            projectId,
+            gatewayKeyId,
+            model: targetModel,
+            promptTokens,
+            completionTokens,
+            totalTokens: promptTokens + completionTokens,
+            costUsd: cost,
+            latencyMs: latency,
+            statusCode,
+            promptInjectionScore: injectionScore,
+            requestId: providerRequestId,
+        });
     } catch (err) {
         console.error('[Gateway] [Logger] Failed to log request:', err);
     }

@@ -6,7 +6,7 @@ const PRICING_KV_KEY = 'GLOBAL_PRICING_MANIFEST';
 
 export class PricingService {
     /**
-     * Get pricing manifest from KV or fallback to D1
+     * Get pricing manifest from KV or fallback to DB via repository
      */
     static async getPricingManifest(c: Context<{ Bindings: Env; Variables: Variables }>): Promise<Record<string, ModelPricing>> {
         try {
@@ -16,15 +16,14 @@ export class PricingService {
                 return JSON.parse(cached);
             }
 
-            // 2. Fallback to D1
-            console.log('[Gateway] [Pricing] KV Cache miss, fetching from D1...');
-            const { results } = await c.env.DB.prepare(`
-                SELECT * FROM model_pricing
-            `).all();
+            // 2. Fallback to DB via Repository
+            console.log('[Gateway] [Pricing] KV Cache miss, fetching from DB...');
+            const repos = c.get('repos')!;
+            const results = await repos.pricing.findAll();
 
             const manifest: Record<string, ModelPricing> = {};
-            results.forEach((row: any) => {
-                manifest[row.model_id] = row as ModelPricing;
+            results.forEach((row) => {
+                manifest[row.model_id] = row;
             });
 
             // 3. Update KV Cache (Expire in 1 hour)
@@ -59,10 +58,6 @@ export class PricingService {
         let pricing = manifest[model];
 
         if (!pricing) {
-            // Try to find a model that ends with the requested model
-            // Priority 1: Match with specific provider prefix (e.g., openai/gpt-4o)
-            // Priority 2: Match with ANY prefix (e.g., google/gemini-...)
-            // Priority 3: Fuzzy match (stripping version numbers/suffixes)
             const keys = Object.keys(manifest);
 
             const providerMatch = keys.find(k => k === `${provider}/${model}` || k === `${provider}:${model}`);
@@ -74,9 +69,8 @@ export class PricingService {
                 if (genericMatch) {
                     pricing = manifest[genericMatch];
                 } else {
-                    // Fuzzy Suffix Match: Try to find a "base" model
-                    // e.g. gemini-2.5-flash -> match if anything contains 'gemini' and 'flash'
-                    const baseModel = model.split('-')[0]; // 'gemini'
+                    // Fuzzy Suffix Match
+                    const baseModel = model.split('-')[0];
                     const fuzzyMatch = keys.find(k => k.includes(baseModel) && k.includes(provider));
                     if (fuzzyMatch) {
                         pricing = manifest[fuzzyMatch];

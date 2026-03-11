@@ -4,6 +4,8 @@ import { Env, Variables } from '../types';
 const LITELLM_PRICING_URL = 'https://raw.githubusercontent.com/BerriAI/litellm/main/model_prices_and_context_window.json';
 
 export async function syncPricingFromLiteLLM(c: Context<{ Bindings: Env; Variables: Variables }>) {
+    const repos = c.get('repos')!;
+
     try {
         console.log('[Gateway] [Sync] Fetching pricing from LiteLLM...');
         const response = await fetch(LITELLM_PRICING_URL);
@@ -38,32 +40,16 @@ export async function syncPricingFromLiteLLM(c: Context<{ Bindings: Env; Variabl
             const outputPer1m = outputCost * 1_000_000;
 
             try {
-                // Upsert model pricing, but respect is_custom = 1
-                await c.env.DB.prepare(`
-                    INSERT INTO model_pricing (
-                        id, provider, model_id, mode, 
-                        input_per_1m, output_per_1m, output_per_image,
-                        max_input_tokens, max_output_tokens, updated_at
-                    ) VALUES (HEX(RANDOMBLOB(16)), ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
-                    ON CONFLICT(model_id) DO UPDATE SET
-                        provider = excluded.provider,
-                        mode = excluded.mode,
-                        input_per_1m = CASE WHEN is_custom = 0 THEN excluded.input_per_1m ELSE input_per_1m END,
-                        output_per_1m = CASE WHEN is_custom = 0 THEN excluded.output_per_1m ELSE output_per_1m END,
-                        output_per_image = CASE WHEN is_custom = 0 THEN excluded.output_per_image ELSE output_per_image END,
-                        max_input_tokens = excluded.max_input_tokens,
-                        max_output_tokens = excluded.max_output_tokens,
-                        updated_at = CURRENT_TIMESTAMP
-                `).bind(
-                    info.litellm_provider || 'unknown',
+                await repos.pricing.upsert({
+                    provider: info.litellm_provider || 'unknown',
                     modelId,
-                    info.mode,
+                    mode: info.mode,
                     inputPer1m,
                     outputPer1m,
-                    imageCost,
-                    info.max_input_tokens || info.max_tokens || null,
-                    info.max_output_tokens || null
-                ).run();
+                    outputPerImage: imageCost,
+                    maxInputTokens: info.max_input_tokens || info.max_tokens || null,
+                    maxOutputTokens: info.max_output_tokens || null,
+                });
 
                 updatedCount++;
             } catch (err) {

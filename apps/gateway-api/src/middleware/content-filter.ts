@@ -70,24 +70,24 @@ async function logSecurityViolation(
 ) {
     const project = c.get('project')!;
     const gatewayKey = c.get('gatewayKey')!;
+    const repos = c.get('repos')!;
     const requestId = crypto.randomUUID();
 
     try {
-        await c.env.DB.prepare(`
-            INSERT INTO request_logs (
-                id, project_id, gateway_key_id, model, 
-                prompt_tokens, completion_tokens, total_tokens, 
-                cost_usd, latency_ms, status_code, 
-                prompt_injection_score, request_id, created_at
-            ) VALUES (?, ?, ?, ?, 0, 0, 0, 0, 0, 403, ?, ?, CURRENT_TIMESTAMP)
-        `).bind(
-            requestId, 
-            project.id, 
-            gatewayKey.id, 
-            model || 'unknown',
-            score,
-            'blocked_by_gateway'
-        ).run();
+        await repos.requestLog.create({
+            id: requestId,
+            projectId: project.id,
+            gatewayKeyId: gatewayKey.id,
+            model: model || 'unknown',
+            promptTokens: 0,
+            completionTokens: 0,
+            totalTokens: 0,
+            costUsd: 0,
+            latencyMs: 0,
+            statusCode: 403,
+            promptInjectionScore: score,
+            requestId: 'blocked_by_gateway',
+        });
     } catch (err) {
         console.error('[Gateway] [Security] Failed to log security violation:', err);
     }

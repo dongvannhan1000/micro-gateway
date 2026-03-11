@@ -1,4 +1,5 @@
 import { Project, GatewayKey } from '@ms-gateway/db';
+import { Repositories } from './repositories';
 
 export interface Env {
     DB: D1Database;
@@ -17,6 +18,8 @@ export interface Variables {
     };
     project?: Project;
     gatewayKey?: GatewayKey;
+    repos?: Repositories;
     promptInjectionScore?: number;
     anomalyDetected?: boolean;
 }
+

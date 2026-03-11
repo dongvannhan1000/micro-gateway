@@ -2,6 +2,7 @@ import { Hono } from 'hono';
 import { Env, Variables } from './types';
 import { gatewayRouter } from './gateway';
 import { managementRouter } from './management';
+import { injectDatabase } from './middleware/inject-db';
 
 const app = new Hono<{ Bindings: Env; Variables: Variables }>();
 
@@ -29,6 +30,9 @@ app.use('*', async (c, next) => {
     await next();
 });
 
+// Inject Database Repositories (available via c.get('repos'))
+app.use('*', injectDatabase);
+
 app.get('/health', (c) => c.json({
   status: 'ok',
   environment: c.env.ENVIRONMENT,
@@ -40,3 +44,4 @@ app.route('/v1', gatewayRouter);      // OpenAI-compatible Proxy
 app.route('/api', managementRouter);  // Internal Management API
 
 export default app;
+

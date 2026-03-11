@@ -12,19 +12,16 @@ export async function checkAlerts(
     projectId: string,
     currentCost: number
 ) {
+    const repos = c.get('repos')!;
+
     try {
         // 1. Fetch active alert rules for this project
-        const { results: rules } = await c.env.DB.prepare(`
-            SELECT * FROM alert_rules 
-            WHERE project_id = ? AND is_enabled = 1
-        `).bind(projectId).all();
+        const rules = await repos.alert.findActiveRules(projectId);
 
         if (!rules || rules.length === 0) return;
 
         // 2. Fetch project details (for name and total usage)
-        const project = await c.env.DB.prepare(`
-            SELECT name FROM projects WHERE id = ?
-        `).bind(projectId).first() as any;
+        const project = await repos.project.findNameById(projectId);
 
         const totalUsage = c.get('gatewayKey')?.current_month_usage_usd || 0;
 
@@ -35,18 +32,18 @@ export async function checkAlerts(
             // Handle Cost Threshold Alerts
             if (rule.type === 'cost_threshold' && totalUsage >= rule.threshold) {
                 shouldTrigger = true;
-                message = `Project "${project.name}" has reached its spending threshold of $${rule.threshold}. Current usage: $${totalUsage.toFixed(4)}.`;
+                message = `Project "${project?.name}" has reached its spending threshold of $${rule.threshold}. Current usage: $${totalUsage.toFixed(4)}.`;
             }
 
             // Handle Prompt Injection Alerts
             const injectionScore = c.get('promptInjectionScore') || 0;
             if (rule.type === 'injection_detected' && injectionScore >= 0.7) {
                 shouldTrigger = true;
-                message = `High-risk prompt injection attempt detected on project "${project.name}". Score: ${injectionScore}. Request blocked.`;
+                message = `High-risk prompt injection attempt detected on project "${project?.name}". Score: ${injectionScore}. Request blocked.`;
             }
 
             if (shouldTrigger) {
-                await processTrigger(c, rule, project.name, message);
+                await processTrigger(c, rule, project?.name || 'Unknown', message);
             }
         }
     } catch (err) {
@@ -60,6 +57,8 @@ async function processTrigger(
     projectName: string,
     message: string
 ) {
+    const repos = c.get('repos')!;
+
     // Cooldown check (prevent same alert from firing multiple times in 1 hour)
     const cooldownKey = `alert_cooldown:${rule.id}`;
     const isCooldown = await c.env.RATE_LIMIT_KV.get(cooldownKey);
@@ -69,10 +68,12 @@ async function processTrigger(
 
     // Log to history
     const historyId = crypto.randomUUID();
-    await c.env.DB.prepare(`
-        INSERT INTO alert_history (id, project_id, rule_id, message, triggered_at)
-        VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP)
-    `).bind(historyId, rule.project_id, rule.id, message).run();
+    await repos.alert.createHistory({
+        id: historyId,
+        projectId: rule.project_id,
+        ruleId: rule.id,
+        message,
+    });
 
     // Set cooldown (1 hour)
     await c.env.RATE_LIMIT_KV.put(cooldownKey, '1', { expirationTtl: 3600 });
