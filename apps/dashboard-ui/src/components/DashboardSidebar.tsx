@@ -11,7 +11,8 @@ import {
     LogOut,
     ChevronLeft,
     ChevronRight,
-    Plus
+    Plus,
+    Bell
 } from 'lucide-react';
 import { logout } from '@/app/login/actions';
 import { useState } from 'react';
@@ -27,6 +28,7 @@ const navItems = [
     { name: 'Gateway Keys', href: '/dashboard/keys', icon: Key },
     { name: 'Security', href: '/dashboard/security', icon: ShieldCheck },
     { name: 'Analytics', href: '/dashboard/analytics', icon: BarChart3 },
+    { name: 'Alerts', href: '/dashboard/alerts', icon: Bell },
     { name: 'Settings', href: '/dashboard/settings', icon: Settings },
 ];
 

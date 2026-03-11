@@ -5,6 +5,7 @@ import { generateGatewayKey, hashGatewayKey } from '../utils/crypto';
 import { Project, GatewayKey, ProviderConfig } from '@ms-gateway/db';
 import { syncPricingFromLiteLLM } from './sync-pricing';
 import { alertRouter } from './alerts';
+import { analyticsRouter } from './analytics';
 
 const management = new Hono<{ Bindings: Env; Variables: Variables }>();
 
@@ -13,6 +14,9 @@ management.post('/pricing/sync', syncPricingFromLiteLLM);
 
 // Alerts (Nested)
 management.route('/projects/:projectId/alerts', alertRouter);
+
+// Analytics (Nested)
+management.route('/projects/:projectId/analytics', analyticsRouter);
 
 // All management routes require Supabase session authentication
 management.use('*', sessionAuth);

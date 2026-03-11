@@ -93,3 +93,60 @@ export async function saveProviderConfig(projectId: string, provider: string, ap
         return { error: e.message };
     }
 }
+
+export async function getAnalyticsSummary(projectId: string) {
+    const supabase = await createClient();
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) throw new Error('Unauthorized');
+
+    return fetchGateway(`/api/projects/${projectId}/analytics/summary`, session.access_token);
+}
+
+export async function getUsageData(projectId: string) {
+    const supabase = await createClient();
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) throw new Error('Unauthorized');
+
+    return fetchGateway(`/api/projects/${projectId}/analytics/usage`, session.access_token);
+}
+
+export async function getSecurityLogs(projectId: string) {
+    const supabase = await createClient();
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) throw new Error('Unauthorized');
+
+    return fetchGateway(`/api/projects/${projectId}/analytics/security`, session.access_token);
+}
+
+export async function getAlertRules(projectId: string) {
+    const supabase = await createClient();
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) throw new Error('Unauthorized');
+
+    return fetchGateway(`/api/projects/${projectId}/alerts`, session.access_token);
+}
+
+export async function createAlertRule(projectId: string, rule: any) {
+    const supabase = await createClient();
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) throw new Error('Unauthorized');
+
+    const result = await fetchGateway(`/api/projects/${projectId}/alerts`, session.access_token, {
+        method: 'POST',
+        body: JSON.stringify(rule),
+    });
+    revalidatePath(`/dashboard/projects/${projectId}/alerts`);
+    return result;
+}
+
+export async function deleteAlertRule(projectId: string, alertId: string) {
+    const supabase = await createClient();
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) throw new Error('Unauthorized');
+
+    await fetchGateway(`/api/projects/${projectId}/alerts/${alertId}`, session.access_token, {
+        method: 'DELETE',
+    });
+    revalidatePath(`/dashboard/projects/${projectId}/alerts`);
+    return { success: true };
+}
