@@ -7,6 +7,7 @@ export interface Env {
     SUPABASE_URL: string;
     SUPABASE_JWT_SECRET: string;
     ENCRYPTION_SECRET: string; // Used for encrypting/decrypting provider keys
+    RESEND_API_KEY: string;
 }
 
 export interface Variables {
@@ -16,4 +17,6 @@ export interface Variables {
     };
     project?: Project;
     gatewayKey?: GatewayKey;
+    promptInjectionScore?: number;
+    anomalyDetected?: boolean;
 }

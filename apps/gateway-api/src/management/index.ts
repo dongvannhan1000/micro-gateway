@@ -4,11 +4,15 @@ import { sessionAuth } from '../middleware/session-auth';
 import { generateGatewayKey, hashGatewayKey } from '../utils/crypto';
 import { Project, GatewayKey, ProviderConfig } from '@ms-gateway/db';
 import { syncPricingFromLiteLLM } from './sync-pricing';
+import { alertRouter } from './alerts';
 
 const management = new Hono<{ Bindings: Env; Variables: Variables }>();
 
 // Pricing Sync (Admin/Internal)
 management.post('/pricing/sync', syncPricingFromLiteLLM);
+
+// Alerts (Nested)
+management.route('/projects/:projectId/alerts', alertRouter);
 
 // All management routes require Supabase session authentication
 management.use('*', sessionAuth);

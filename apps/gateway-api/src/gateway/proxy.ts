@@ -34,30 +34,40 @@ export async function proxyHandler(c: Context<{ Bindings: Env; Variables: Variab
         }
     }
 
-    // 2. Resolve Provider & Key
-    // Default to Gemini for Sprint 1 if no OpenAI key is configured
-    let targetBaseUrl = GEMINI_OPENAI_BASE_URL;
+    // 2. Resolve Provider & Key using Smart Routing
+    const { resolveProvider, getProviderBaseUrl } = await import('./model-router');
+    const resolved = resolveProvider(targetModel);
+
+    let targetBaseUrl = '';
     let providerKey = '';
-    let providerName = 'default';
+    let providerName = '';
+
     try {
-        const { results } = await c.env.DB.prepare(`
-      SELECT * FROM provider_configs 
-      WHERE project_id = ? 
-      ORDER BY is_default DESC, created_at ASC 
-      LIMIT 1
-    `).bind(project.id).all();
+        const { results: configs } = await c.env.DB.prepare(`
+            SELECT * FROM provider_configs WHERE project_id = ?
+        `).bind(project.id).all();
 
-        if (results && results.length > 0) {
-            const config = results[0] as any;
-            providerName = config.provider;
-            providerKey = await decryptProviderKey(config.api_key_encrypted, c.env.ENCRYPTION_SECRET);
-
-            if (config.provider === 'openai') {
-                targetBaseUrl = 'https://api.openai.com/v1/';
-            }
-        } else {
-            return openAiError(c, 'No AI provider configured for this project', 'invalid_request_error', 'no_provider_config');
+        if (!configs || configs.length === 0) {
+            return openAiError(c, 'No AI providers configured for this project', 'invalid_request_error', 'no_provider_config');
         }
+
+        let selectedConfig: any = null;
+        if (resolved) {
+            selectedConfig = configs.find((cfg: any) => cfg.provider === resolved.provider);
+            if (selectedConfig) {
+                targetBaseUrl = resolved.baseUrl;
+                console.log(`[Gateway] [Router] Smart match found: ${resolved.provider}`);
+            }
+        }
+
+        if (!selectedConfig) {
+            selectedConfig = configs.find((cfg: any) => cfg.is_default === 1) || configs[0];
+            targetBaseUrl = getProviderBaseUrl(selectedConfig.provider);
+            console.log(`[Gateway] [Router] Using fallback: ${selectedConfig.provider}`);
+        }
+
+        providerName = selectedConfig.provider;
+        providerKey = await decryptProviderKey(selectedConfig.api_key_encrypted, c.env.ENCRYPTION_SECRET);
     } catch (err) {
         console.error('[Gateway] [Proxy] Provider lookup error:', err);
         return openAiError(c, 'Internal Server Error', 'server_error', null, 500);
@@ -112,6 +122,10 @@ export async function proxyHandler(c: Context<{ Bindings: Env; Variables: Variab
 
                     // Log request (Simplified for streaming in Sprint 1)
                     await logRequest(c, requestedModel, targetModel, 200, latency, 0, 0);
+
+                    // Check alerts
+                    const { checkAlerts } = await import('../services/alert-engine');
+                    await checkAlerts(c, project.id, 0);
                 })());
             }
 
@@ -143,18 +157,26 @@ export async function proxyHandler(c: Context<{ Bindings: Env; Variables: Variab
         const usage = resData.usage || { prompt_tokens: 0, completion_tokens: 0, total_tokens: 0 };
         const cost = await PricingService.calculate(c, targetModel, providerName, usage.prompt_tokens, usage.completion_tokens);
 
-        // Log request asynchronously
-        c.executionCtx.waitUntil(logRequest(
-            c,
-            requestedModel,
-            targetModel,
-            response.status,
-            latency,
-            usage.prompt_tokens,
-            usage.completion_tokens,
-            cost,
-            resData.id
-        ));
+        const injectionScore = c.get('promptInjectionScore') || 0;
+
+        // Log request and check alerts asynchronously
+        c.executionCtx.waitUntil((async () => {
+            await logRequest(
+                c,
+                requestedModel,
+                targetModel,
+                response.status,
+                latency,
+                usage.prompt_tokens,
+                usage.completion_tokens,
+                cost,
+                resData.id,
+                injectionScore
+            );
+
+            const { checkAlerts } = await import('../services/alert-engine');
+            await checkAlerts(c, project.id, cost);
+        })());
 
         return c.json(resData, response.status as any, {
             'X-MS-Latency-MS': latency.toString(),
@@ -176,7 +198,8 @@ async function logRequest(
     promptTokens: number,
     completionTokens: number,
     cost: number = 0,
-    providerRequestId: string = ''
+    providerRequestId: string = '',
+    injectionScore: number = 0
 ) {
     const project = c.get('project')!;
     const gatewayKey = c.get('gatewayKey')!;
@@ -187,12 +210,12 @@ async function logRequest(
       INSERT INTO request_logs (
         id, project_id, gateway_key_id, model, 
         prompt_tokens, completion_tokens, total_tokens, 
-        cost_usd, latency_ms, status_code, request_id, created_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+        cost_usd, latency_ms, status_code, prompt_injection_score, request_id, created_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
     `).bind(
             requestId, project.id, gatewayKey.id, targetModel,
             promptTokens, completionTokens, promptTokens + completionTokens,
-            cost, latency, statusCode, providerRequestId
+            cost, latency, statusCode, injectionScore, providerRequestId
         ).run();
 
         // Update Gateway Key usage stats
