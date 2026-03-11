@@ -1,43 +1,61 @@
-import { INJECTION_PATTERNS } from './injection-patterns';
+import { INJECTION_PATTERNS, Severity } from './injection-patterns';
 
 export interface ScoreResult {
     score: number;
-    matches: string[];
+    matches: { id: string; description: string; severity: Severity }[];
     isBlocked: boolean;
+    blockReason: string | null;
 }
 
 /**
- * Heuristic scoring engine for prompt injections.
- * Calculates a score between 0.0 and 1.0 based on matched patterns.
+ * Prompt Injection Scorer (v2)
+ * 
+ * Blocking Logic:
+ * - 1 critical match → auto-block
+ * - 2+ high matches → block  
+ * - high + medium → block
+ * - medium alone → flag only (never block)
+ * 
+ * Score is 0.0–1.0 for analytics/logging, NOT used for blocking decisions.
  */
-export function scorePrompt(text: string, threshold: number = 0.7): ScoreResult {
-    if (!text) return { score: 0, matches: [], isBlocked: false };
+export function scorePrompt(text: string): ScoreResult {
+    if (!text) return { score: 0, matches: [], isBlocked: false, blockReason: null };
 
-    let totalWeight = 0;
-    const matches: string[] = [];
+    const matches: ScoreResult['matches'] = [];
+    let criticalCount = 0;
+    let highCount = 0;
+    let mediumCount = 0;
 
-    for (const { pattern, weight, description } of INJECTION_PATTERNS) {
+    for (const { id, pattern, severity, description } of INJECTION_PATTERNS) {
         if (pattern.test(text)) {
-            // Heuristic: Take the highest weight found, plus a fraction of others
-            // This prevents many low-weight matches from easily triggering high score
-            // while allowing high-weight matches to dominate.
-            totalWeight = Math.max(totalWeight, weight);
-            
-            // Incrementally add a small portion of other weights to account for combined risk
-            if (totalWeight < 1.0 && weight > 0) {
-                totalWeight += (weight * 0.1);
-            }
+            matches.push({ id, description, severity });
 
-            matches.push(description);
+            if (severity === 'critical') criticalCount++;
+            else if (severity === 'high') highCount++;
+            else if (severity === 'medium') mediumCount++;
         }
     }
 
-    // Clamp score to 1.0
-    const finalScore = Math.min(totalWeight, 1.0);
+    // Blocking logic
+    let isBlocked = false;
+    let blockReason: string | null = null;
 
-    return {
-        score: finalScore,
-        matches: Array.from(new Set(matches)), // Unique matches only
-        isBlocked: finalScore >= threshold
-    };
+    if (criticalCount >= 1) {
+        isBlocked = true;
+        blockReason = `Critical injection pattern detected: ${matches.filter(m => m.severity === 'critical').map(m => m.id).join(', ')}`;
+    } else if (highCount >= 2) {
+        isBlocked = true;
+        blockReason = `Multiple high-severity injection patterns: ${matches.filter(m => m.severity === 'high').map(m => m.id).join(', ')}`;
+    } else if (highCount >= 1 && mediumCount >= 1) {
+        isBlocked = true;
+        blockReason = `Combined injection signals: ${matches.map(m => m.id).join(', ')}`;
+    }
+
+    // Score for analytics (0.0–1.0) — purely informational
+    const score = Math.min(
+        (criticalCount * 0.8) + (highCount * 0.3) + (mediumCount * 0.1),
+        1.0
+    );
+
+    return { score, matches, isBlocked, blockReason };
 }

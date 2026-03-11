@@ -34,10 +34,11 @@ export async function contentFilter(c: Context<{ Bindings: Env; Variables: Varia
 
         if (!promptText) return next();
 
-        const { score, matches, isBlocked } = scorePrompt(promptText);
+        const { score, matches, isBlocked, blockReason } = scorePrompt(promptText);
 
         if (isBlocked) {
-            console.warn(`[Gateway] [Security] Injection blocked for project ${project.id}. Score: ${score}. Matches: ${matches.join(', ')}`);
+            const matchIds = matches.map(m => m.id).join(', ');
+            console.warn(`[Gateway] [Security] Injection blocked for project ${project.id}. Reason: ${blockReason}. Patterns: ${matchIds}`);
 
             // Log security violation (async)
             c.executionCtx.waitUntil(logSecurityViolation(c, body.model, score));
