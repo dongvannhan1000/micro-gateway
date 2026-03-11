@@ -70,3 +70,17 @@ export interface AlertHistory {
     message: string;
     triggered_at: string;
 }
+
+export interface ModelPricing {
+    id: string;
+    provider: string;
+    model_id: string;
+    mode: 'chat' | 'embedding' | 'image_generation';
+    input_per_1m: number;
+    output_per_1m: number;
+    output_per_image: number;
+    max_input_tokens?: number;
+    max_output_tokens?: number;
+    is_custom: number;
+    updated_at: string;
+}

@@ -3,6 +3,7 @@ import { Env, Variables } from '../types';
 import { openAiError } from './errors';
 import { calculateCost } from '@ms-gateway/db';
 import { decryptProviderKey } from '../utils/crypto';
+import { PricingService } from '../services/pricing-service';
 
 const GEMINI_OPENAI_BASE_URL = 'https://generativelanguage.googleapis.com/v1beta/openai/';
 
@@ -140,7 +141,7 @@ export async function proxyHandler(c: Context<{ Bindings: Env; Variables: Variab
         }
 
         const usage = resData.usage || { prompt_tokens: 0, completion_tokens: 0, total_tokens: 0 };
-        const cost = calculateCost(targetModel, usage.prompt_tokens, usage.completion_tokens);
+        const cost = await PricingService.calculate(c, targetModel, providerName, usage.prompt_tokens, usage.completion_tokens);
 
         // Log request asynchronously
         c.executionCtx.waitUntil(logRequest(

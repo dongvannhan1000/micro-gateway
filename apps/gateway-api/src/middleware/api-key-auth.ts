@@ -43,6 +43,17 @@ export async function gatewayKeyAuth(c: Context<{ Bindings: Env; Variables: Vari
 
         const row = results[0] as any;
 
+        // Enforcement: Check if monthly limit is exceeded
+        if (row.monthly_limit_usd > 0 && row.current_month_usage_usd >= row.monthly_limit_usd) {
+            return c.json({
+                error: {
+                    message: 'Monthly usage limit exceeded',
+                    type: 'insufficient_quota',
+                    code: 'usage_limit_reached'
+                }
+            }, 429);
+        }
+
         // Attach current Gateway key and Project to context
         const gatewayKey: GatewayKey = {
             id: row.id,

@@ -99,7 +99,7 @@ export function NewKeyModal({ projectId }: { projectId: string }) {
                                     className="w-full bg-background border border-glass-border rounded-lg py-2.5 pl-7 pr-4 text-sm focus:outline-none focus:border-accent-blue transition-colors"
                                 />
                             </div>
-                            <p className="text-[10px] text-muted italic">Requests will be blocked once this limit is reached.</p>
+                            <p className="text-[10px] text-muted italic">Budget resets at the start of each month. Requests block once reached.</p>
                         </div>
 
                         {error && <p className="text-red-400 text-xs">{error}</p>}

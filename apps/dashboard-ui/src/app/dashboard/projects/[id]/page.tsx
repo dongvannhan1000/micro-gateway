@@ -124,7 +124,7 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
                                         </td>
                                         <td className="px-6 py-4">
                                             <div className="text-sm font-bold">${key.current_month_usage_usd.toFixed(4)}</div>
-                                            <div className="text-[10px] text-muted">Limit: ${key.monthly_limit_usd.toFixed(2)}</div>
+                                            <div className="text-[10px] text-muted">Monthly Limit: ${key.monthly_limit_usd.toFixed(2)}</div>
                                         </td>
                                         <td className="px-6 py-4 text-right">
                                             <RevokeKeyButton projectId={id} keyId={key.id} keyName={key.name} />
