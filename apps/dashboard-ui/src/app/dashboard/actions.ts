@@ -118,6 +118,14 @@ export async function getSecurityLogs(projectId: string) {
     return fetchGateway(`/api/projects/${projectId}/analytics/security`, session.access_token);
 }
 
+export async function getProjects() {
+    const supabase = await createClient();
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) throw new Error('Unauthorized');
+
+    return fetchGateway('/api/projects', session.access_token);
+}
+
 export async function getAlertRules(projectId: string) {
     const supabase = await createClient();
     const { data: { session } } = await supabase.auth.getSession();

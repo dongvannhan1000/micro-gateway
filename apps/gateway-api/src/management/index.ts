@@ -9,6 +9,9 @@ import { analyticsRouter } from './analytics';
 
 const management = new Hono<{ Bindings: Env; Variables: Variables }>();
 
+// All management routes require Supabase session authentication
+management.use('*', sessionAuth);
+
 // Pricing Sync (Admin/Internal)
 management.post('/pricing/sync', syncPricingFromLiteLLM);
 
@@ -17,9 +20,6 @@ management.route('/projects/:projectId/alerts', alertRouter);
 
 // Analytics (Nested)
 management.route('/projects/:projectId/analytics', analyticsRouter);
-
-// All management routes require Supabase session authentication
-management.use('*', sessionAuth);
 
 // --- Gateway Keys (Global) ---
 
@@ -51,7 +51,8 @@ management.get('/projects', async (c) => {
                 p.*,
                 COUNT(r.id) as total_requests,
                 TOTAL(r.cost_usd) as total_cost,
-                AVG(r.latency_ms) as avg_latency
+                AVG(r.latency_ms) as avg_latency,
+                COUNT(CASE WHEN r.prompt_injection_score >= 0.7 OR r.status_code = 403 THEN 1 END) as security_events
             FROM projects p
             LEFT JOIN request_logs r ON p.id = r.project_id
             WHERE p.user_id = ?
@@ -89,7 +90,8 @@ management.get('/projects/:id', async (c) => {
         p.*,
         COUNT(r.id) as total_requests,
         TOTAL(r.cost_usd) as total_cost,
-        AVG(r.latency_ms) as avg_latency
+        AVG(r.latency_ms) as avg_latency,
+        COUNT(CASE WHEN r.prompt_injection_score >= 0.7 OR r.status_code = 403 THEN 1 END) as security_events
       FROM projects p
       LEFT JOIN request_logs r ON p.id = r.project_id
       WHERE p.id = ? AND p.user_id = ?

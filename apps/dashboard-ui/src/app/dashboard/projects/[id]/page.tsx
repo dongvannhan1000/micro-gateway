@@ -77,12 +77,12 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
             {/* Stats Quick View */}
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                 {[
-                    { label: 'Requests (Total)', value: (project.total_requests || 0).toString(), icon: Activity, color: 'text-accent-blue' },
-                    { label: 'Total Cost', value: `$${(project.total_cost || 0).toFixed(4)}`, icon: DollarSign, color: 'text-green-400' },
-                    { label: 'Avg Latency', value: `${Math.round(project.avg_latency || 0)}ms`, icon: Clock, color: 'text-accent-violet' },
-                    { label: 'Security Blocks', value: '0', icon: ShieldCheck, color: 'text-red-400' },
+                    { label: 'Requests (Total)', value: (project.total_requests || 0).toString(), icon: Activity, color: 'text-accent-blue', href: `/dashboard/analytics?projectId=${id}` },
+                    { label: 'Total Cost', value: `$${(project.total_cost || 0).toFixed(4)}`, icon: DollarSign, color: 'text-green-400', href: `/dashboard/analytics?projectId=${id}` },
+                    { label: 'Avg Latency', value: `${Math.round(project.avg_latency || 0)}ms`, icon: Clock, color: 'text-accent-violet', href: `/dashboard/analytics?projectId=${id}` },
+                    { label: 'Security Blocks', value: (project.security_events || 0).toString(), icon: ShieldCheck, color: 'text-red-400', href: `/dashboard/security?projectId=${id}` },
                 ].map((stat, i) => (
-                    <div key={i} className="glass-card flex items-center gap-4 py-4">
+                    <Link key={i} href={stat.href} className="glass-card flex items-center gap-4 py-4 hover:bg-glass-bg/50 transition-all cursor-pointer">
                         <div className={cn("p-2 rounded-lg bg-glass-bg border border-glass-border", stat.color)}>
                             <stat.icon className="w-5 h-5" />
                         </div>
@@ -90,7 +90,7 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
                             <p className="text-[10px] uppercase font-bold text-muted tracking-wider">{stat.label}</p>
                             <p className="text-xl font-bold">{stat.value}</p>
                         </div>
-                    </div>
+                    </Link>
                 ))}
             </div>
 

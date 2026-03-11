@@ -2,17 +2,38 @@
 
 import React, { useEffect, useState } from 'react';
 import { ShieldAlert, Terminal, Clock, ExternalLink, Search, Filter } from 'lucide-react';
-import { getSecurityLogs } from '../actions';
+import { useSearchParams } from 'next/navigation';
+import { getSecurityLogs, getProjects } from '../actions';
 import { clsx } from 'clsx';
 
 export default function SecurityPage() {
+    const searchParams = useSearchParams();
     const [logs, setLogs] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
-    const [selectedProjectId, setSelectedProjectId] = useState<string>(''); // Placeholder
+    const [projects, setProjects] = useState<any[]>([]);
+    const [selectedProjectId, setSelectedProjectId] = useState<string>('');
 
     useEffect(() => {
-        // In a real scenario, we'd pick the project from context or URL
-        // loadLogs('dummy-id');
+        const init = async () => {
+            try {
+                const projectsData = await getProjects();
+                setProjects(projectsData);
+                
+                const queryProjectId = searchParams.get('projectId');
+                const initialId = queryProjectId || (projectsData.length > 0 ? projectsData[0].id : '');
+                
+                if (initialId) {
+                    setSelectedProjectId(initialId);
+                    loadLogs(initialId);
+                } else {
+                    setLoading(false);
+                }
+            } catch (err) {
+                console.error('Failed to load projects:', err);
+                setLoading(false);
+            }
+        };
+        init();
     }, []);
 
     const loadLogs = async (projectId: string) => {
@@ -21,27 +42,43 @@ export default function SecurityPage() {
             const data = await getSecurityLogs(projectId);
             setLogs(data);
         } catch (err) {
-            console.error(err);
+            console.error('Failed to load logs:', err);
         } finally {
             setLoading(false);
         }
     };
 
+    const handleProjectChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+        const id = e.target.value;
+        setSelectedProjectId(id);
+        loadLogs(id);
+    };
+
     return (
         <div className="space-y-8 animate-fade-in">
-            <div className="flex items-center justify-between">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <div>
                     <h1 className="text-3xl font-bold font-heading tracking-tight">Security <span className="text-red-500">Logs</span></h1>
                     <p className="text-muted mt-1">Monitor blocked requests and prompt injection detection events.</p>
                 </div>
                 <div className="flex items-center gap-3">
+                    <select 
+                        value={selectedProjectId}
+                        onChange={handleProjectChange}
+                        className="bg-glass-bg border border-glass-border px-3 py-1.5 rounded-xl text-xs font-bold focus:ring-accent-blue/50 outline-none"
+                    >
+                        {projects.length === 0 ? (
+                            <option value="">No projects found</option>
+                        ) : (
+                            projects.map(p => (
+                                <option key={p.id} value={p.id}>{p.name}</option>
+                            ))
+                        )}
+                    </select>
                     <div className="bg-glass-bg border border-glass-border px-3 py-1.5 rounded-xl flex items-center gap-2">
                         <Search className="w-4 h-4 text-muted" />
                         <input type="text" placeholder="Search logs..." className="bg-transparent border-none text-xs focus:ring-0 w-32" />
                     </div>
-                    <button className="p-2 bg-glass-bg border border-glass-border rounded-xl text-muted hover:text-white transition-all">
-                        <Filter className="w-4 h-4" />
-                    </button>
                 </div>
             </div>
 

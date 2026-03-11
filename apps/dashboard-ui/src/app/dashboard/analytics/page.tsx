@@ -2,30 +2,42 @@
 
 import React, { useEffect, useState } from 'react';
 import { Activity, DollarSign, Clock, ShieldAlert, BarChart3, ChevronRight } from 'lucide-react';
+import { useSearchParams } from 'next/navigation';
 import { StatsCard } from '@/components/dashboard/stats-card';
 import { UsageChart } from '@/components/dashboard/usage-chart';
-import { getAnalyticsSummary, getUsageData } from '../actions';
+import { getAnalyticsSummary, getUsageData, getProjects } from '../actions';
 import { fetchGateway } from '@/utils/api';
 import { Project } from '@ms-gateway/db';
 
 export default function AnalyticsPage() {
-    const [projects, setProjects] = useState<Project[]>([]);
+    const searchParams = useSearchParams();
+    const [projects, setProjects] = useState<any[]>([]);
     const [selectedProjectId, setSelectedProjectId] = useState<string>('');
     const [summary, setSummary] = useState<any>(null);
     const [usage, setUsage] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        // Fetch all projects initially to let user select
-        const loadProjects = async () => {
+        const init = async () => {
             try {
-                // In a real app, we'd get the session here or from a provider
-                // For now, let's assume we can fetch projects (simplified)
-                const res = await fetch('/api/dashboard/projects'); // Need a client-safe way or pass from server
-                // But since this is a client component, let's use a server action if possible
-            } catch (err) {}
+                const projectsData = await getProjects();
+                setProjects(projectsData);
+                
+                const queryProjectId = searchParams.get('projectId');
+                const initialId = queryProjectId || (projectsData.length > 0 ? projectsData[0].id : '');
+
+                if (initialId) {
+                    setSelectedProjectId(initialId);
+                    loadData(initialId);
+                } else {
+                    setLoading(false);
+                }
+            } catch (err) {
+                console.error('Failed to load projects:', err);
+                setLoading(false);
+            }
         };
-        // loadProjects();
+        init();
     }, []);
 
     const loadData = async (projectId: string) => {
@@ -38,16 +50,17 @@ export default function AnalyticsPage() {
             setSummary(s);
             setUsage(u);
         } catch (err) {
-            console.error(err);
+            console.error('Failed to load analytics data:', err);
         } finally {
             setLoading(false);
         }
     };
 
-    // Placeholder project select effect
-    useEffect(() => {
-        // If we had a project, we'd load it. For now, let's assume a dummy ID or prompt selection
-    }, []);
+    const handleProjectChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+        const id = e.target.value;
+        setSelectedProjectId(id);
+        loadData(id);
+    };
 
     return (
         <div className="space-y-8 animate-fade-in">
@@ -56,9 +69,23 @@ export default function AnalyticsPage() {
                     <h1 className="text-3xl font-bold font-heading tracking-tight">System <span className="text-gradient">Analytics</span></h1>
                     <p className="text-muted mt-1">Real-time performance and cost monitoring across your gateways.</p>
                 </div>
-                <div className="flex items-center gap-2 bg-glass-bg border border-glass-border p-1 rounded-xl">
-                    <button className="px-4 py-1.5 text-xs font-bold rounded-lg bg-accent-blue text-white shadow-lg shadow-accent-blue/20 transition-all">Last 30 Days</button>
-                    <button className="px-4 py-1.5 text-xs font-bold rounded-lg text-muted hover:text-white transition-all">Last 7 Days</button>
+                <div className="flex items-center gap-3">
+                    <select 
+                        value={selectedProjectId}
+                        onChange={handleProjectChange}
+                        className="bg-glass-bg border border-glass-border px-3 py-1.5 rounded-xl text-xs font-bold focus:ring-accent-blue/50 outline-none"
+                    >
+                        {projects.length === 0 ? (
+                            <option value="">No projects found</option>
+                        ) : (
+                            projects.map(p => (
+                                <option key={p.id} value={p.id}>{p.name}</option>
+                            ))
+                        )}
+                    </select>
+                    <div className="flex items-center gap-2 bg-glass-bg border border-glass-border p-1 rounded-xl">
+                        <button className="px-4 py-1.5 text-xs font-bold rounded-lg bg-accent-blue text-white shadow-lg shadow-accent-blue/20 transition-all">Last 30 Days</button>
+                    </div>
                 </div>
             </div>
 

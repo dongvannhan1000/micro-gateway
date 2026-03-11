@@ -10,6 +10,7 @@ export interface Project {
     total_requests?: number;
     total_cost?: number;
     avg_latency?: number | null;
+    security_events?: number;
 }
 
 export interface GatewayKey {

@@ -10,17 +10,19 @@ analytics.get('/summary', async (c) => {
     const projectId = c.req.param('projectId');
 
     try {
-        const stats = await c.env.DB.prepare(`
+        const stats: any = await c.env.DB.prepare(`
             SELECT 
                 COUNT(*) as total_requests,
-                SUM(cost_usd) as total_cost,
+                TOTAL(cost_usd) as total_cost,
                 AVG(latency_ms) as avg_latency,
                 COUNT(CASE WHEN prompt_injection_score >= 0.7 OR status_code = 403 THEN 1 END) as security_events
             FROM request_logs
             WHERE project_id = ? 
             AND created_at >= date('now', '-30 days')
             AND project_id IN (SELECT id FROM projects WHERE user_id = ?)
-        `).bind(projectId, user.id).first() as any;
+        `).bind(projectId, user.id).first();
+
+        if (!stats) return c.json({ totalRequests: 0, totalCost: 0, avgLatency: 0, securityEvents: 0 });
 
         return c.json({
             totalRequests: stats.total_requests || 0,
@@ -28,8 +30,9 @@ analytics.get('/summary', async (c) => {
             avgLatency: stats.avg_latency || 0,
             securityEvents: stats.security_events || 0
         });
-    } catch (err) {
-        return c.json({ error: 'Failed to fetch summary' }, 500);
+    } catch (err: any) {
+        console.error('[Analytics] Summary Error:', err.message, err.stack);
+        return c.json({ error: 'Failed to fetch summary', details: err.message }, 500);
     }
 });
 
@@ -44,7 +47,7 @@ analytics.get('/usage', async (c) => {
             SELECT 
                 date(created_at) as day,
                 COUNT(*) as requests,
-                SUM(cost_usd) as cost
+                TOTAL(cost_usd) as cost
             FROM request_logs
             WHERE project_id = ?
             AND created_at >= date('now', '-14 days')
@@ -54,8 +57,9 @@ analytics.get('/usage', async (c) => {
         `).bind(projectId, user.id).all();
 
         return c.json(results);
-    } catch (err) {
-        return c.json({ error: 'Failed to fetch usage data' }, 500);
+    } catch (err: any) {
+        console.error('[Analytics] Usage Error:', err.message, err.stack);
+        return c.json({ error: 'Failed to fetch usage data', details: err.message }, 500);
     }
 });
 
@@ -78,8 +82,9 @@ analytics.get('/security', async (c) => {
         `).bind(projectId, user.id).all();
 
         return c.json(results);
-    } catch (err) {
-        return c.json({ error: 'Failed to fetch security logs' }, 500);
+    } catch (err: any) {
+        console.error('[Analytics] Security Error:', err.message, err.stack);
+        return c.json({ error: 'Failed to fetch security logs', details: err.message }, 500);
     }
 });
 

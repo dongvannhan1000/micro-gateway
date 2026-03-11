@@ -19,7 +19,7 @@ export class PricingService {
             // 2. Fallback to D1
             console.log('[Gateway] [Pricing] KV Cache miss, fetching from D1...');
             const { results } = await c.env.DB.prepare(`
-                SELECT * FROM model_pricing WHERE is_active = 1
+                SELECT * FROM model_pricing
             `).all();
 
             const manifest: Record<string, ModelPricing> = {};
