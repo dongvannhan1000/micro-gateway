@@ -152,7 +152,13 @@ management.post('/projects/:id/provider-configs', async (c) => {
     if (!provider || !api_key) return c.json({ error: 'Missing provider or key' }, 400);
 
     // Encryption secret (should match the one in gateway proxy)
-    const secret = c.env.ENCRYPTION_SECRET || 'dev-secret-key';
+    const secret = c.env.ENCRYPTION_SECRET;
+    
+    if (!secret) {
+        console.error('[Management] Action: save_provider_config failed (Metadata: reason=ENCRYPTION_SECRET_missing)');
+        return c.json({ error: 'Internal Server Error: Encryption not configured' }, 500);
+    }
+
     const encryptedKey = await import('../utils/crypto').then(m => m.encryptProviderKey(api_key, secret));
 
     try {
@@ -176,8 +182,8 @@ management.post('/projects/:id/provider-configs', async (c) => {
 
         return c.json({ success: true });
     } catch (err: any) {
-        console.error(err);
-        return c.json({ error: 'Failed to save provider config', details: err.message }, 500);
+        console.error('[Management] Action: save_provider_config error (Metadata: message=' + err.message + ')');
+        return c.json({ error: 'Failed to save provider config' }, 500);
     }
 });
 
@@ -258,6 +264,70 @@ management.delete('/projects/:projectId/gateway-keys/:keyId', async (c) => {
         return c.json({ success: true });
     } catch (err) {
         return c.json({ error: 'Failed to revoke key' }, 500);
+    }
+});
+
+// --- Security Maintenance ---
+
+/**
+ * Migration endpoint to re-encrypt legacy provider keys with new HKDF-based derivation.
+ * Only accessible to authenticated managers.
+ */
+management.post('/security/migrate-keys', async (c) => {
+    const user = c.get('user')!;
+    const secret = c.env.ENCRYPTION_SECRET;
+
+    const { decryptProviderKey, encryptProviderKey } = await import('../utils/crypto');
+
+    try {
+        // 1. Fetch all provider configs for this user
+        const { results: configs } = await c.env.DB.prepare(`
+            SELECT id, provider, api_key_encrypted, project_id
+            FROM provider_configs
+            WHERE project_id IN (SELECT id FROM projects WHERE user_id = ?)
+        `).bind(user.id).all();
+
+        let updatedCount = 0;
+        let failCount = 0;
+
+        for (const config of configs as any[]) {
+            try {
+                const encryptedBase64 = config.api_key_encrypted;
+                const binary = atob(encryptedBase64);
+                
+                // If it doesn't start with 0x01 (HKDF version marker), it's legacy
+                if (binary.charCodeAt(0) !== 0x01) {
+                    console.log(`[Management] [Security] Migrating legacy key for provider: ${config.provider}`);
+                    
+                    // Decrypt using legacy fallback (built into decryptProviderKey)
+                    const plainKey = await decryptProviderKey(encryptedBase64, secret);
+                    
+                    // Re-encrypt using new HKDF format
+                    const newEncrypted = await encryptProviderKey(plainKey, secret);
+                    
+                    // Update DB
+                    await c.env.DB.prepare(`
+                        UPDATE provider_configs SET api_key_encrypted = ? WHERE id = ?
+                    `).bind(newEncrypted, config.id).run();
+                    
+                    updatedCount++;
+                }
+            } catch (err: any) {
+                console.error(`[Management] [Security] Failed to migrate key ${config.id}:`, err.message);
+                failCount++;
+            }
+        }
+
+        return c.json({
+            success: true,
+            migrated: updatedCount,
+            failed: failCount,
+            message: `Security migration complete. ${updatedCount} keys upgraded to HKDF-AES-256-GCM.`
+        });
+
+    } catch (err: any) {
+        console.error('[Management] [Security] Migration error:', err);
+        return c.json({ error: 'Security migration failed' }, 500);
     }
 });
 

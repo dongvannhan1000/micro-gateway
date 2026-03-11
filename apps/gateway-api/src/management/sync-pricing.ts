@@ -82,6 +82,6 @@ export async function syncPricingFromLiteLLM(c: Context<{ Bindings: Env; Variabl
 
     } catch (err: any) {
         console.error('[Gateway] [Sync] Error:', err);
-        return c.json({ success: false, error: err.message }, 500);
+        return c.json({ success: false, error: 'Internal Server Error' }, 500);
     }
 }

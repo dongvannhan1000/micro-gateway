@@ -61,9 +61,7 @@ export async function sessionAuth(c: Context<{ Bindings: Env; Variables: Variabl
         console.error(`[GatewayService] Action: sessionAuth error (Metadata: message=${err.message})`);
         console.error(err.stack);
         return c.json({
-            error: 'Authentication failed',
-            details: err.message,
-            tip: 'Check if SUPABASE_JWT_SECRET matches or if JWKS is reachable'
-        }, 500);
+            error: 'Authentication failed'
+        }, 401);
     }
 }

@@ -20,6 +20,10 @@ export async function gatewayKeyAuth(c: Context<{ Bindings: Env; Variables: Vari
     }
 
     const key = authHeader.split(' ')[1];
+    
+    // Phase 3: Artificial delay to mitigate timing attacks
+    await new Promise(resolve => setTimeout(resolve, 5));
+    
     const hashedKey = await hashGatewayKey(key);
 
     try {

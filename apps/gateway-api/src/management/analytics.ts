@@ -32,7 +32,7 @@ analytics.get('/summary', async (c) => {
         });
     } catch (err: any) {
         console.error('[Analytics] Summary Error:', err.message, err.stack);
-        return c.json({ error: 'Failed to fetch summary', details: err.message }, 500);
+        return c.json({ error: 'Failed to fetch summary' }, 500);
     }
 });
 
@@ -59,7 +59,7 @@ analytics.get('/usage', async (c) => {
         return c.json(results);
     } catch (err: any) {
         console.error('[Analytics] Usage Error:', err.message, err.stack);
-        return c.json({ error: 'Failed to fetch usage data', details: err.message }, 500);
+        return c.json({ error: 'Failed to fetch usage data' }, 500);
     }
 });
 
@@ -84,7 +84,7 @@ analytics.get('/security', async (c) => {
         return c.json(results);
     } catch (err: any) {
         console.error('[Analytics] Security Error:', err.message, err.stack);
-        return c.json({ error: 'Failed to fetch security logs', details: err.message }, 500);
+        return c.json({ error: 'Failed to fetch security logs' }, 500);
     }
 });
 
