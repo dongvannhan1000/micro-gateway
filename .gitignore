@@ -34,3 +34,13 @@ project-status
 research
 TESTING.md
 .claude/settings.local.json
+
+# Test Files & Results (local development)
+tests/
+test-*.js
+test-*.json
+
+# Backup Files
+*.nocron
+*.bak
+*.backup
