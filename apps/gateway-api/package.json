@@ -11,7 +11,7 @@
   },
   "dependencies": {
     "@ms-gateway/db": "^1.0.0",
-    "hono": "^4.0.0",
+    "hono": "^4.12.7",
     "jose": "^5.10.0"
   },
   "devDependencies": {
