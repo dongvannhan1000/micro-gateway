@@ -3,6 +3,7 @@ import { Env, Variables } from './types';
 import { gatewayRouter } from './gateway';
 import { managementRouter } from './management';
 import { injectDatabase } from './middleware/inject-db';
+import { scheduled } from './cron/monthly-reset';
 
 const app = new Hono<{ Bindings: Env; Variables: Variables }>();
 
@@ -43,5 +44,11 @@ app.get('/health', (c) => c.json({
 app.route('/v1', gatewayRouter);      // OpenAI-compatible Proxy
 app.route('/api', managementRouter);  // Internal Management API
 
+// Export default app for HTTP requests
 export default app;
+
+// Export scheduled handler for Cloudflare Workers Cron Triggers
+// This will be invoked by the cron schedule defined in wrangler.toml
+export { scheduled };
+
 

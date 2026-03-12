@@ -19,17 +19,27 @@ export class RequestLogRepository {
     statusCode: number;
     promptInjectionScore: number;
     requestId: string;
+    piiScrubbedCount?: number;
+    piiScrubbingLevel?: string;
+    requestBodyScrubbed?: string;
+    responseBodyScrubbed?: string;
   }): Promise<void> {
     await this.db.run(
       `INSERT INTO request_logs (
-        id, project_id, gateway_key_id, model, 
-        prompt_tokens, completion_tokens, total_tokens, 
-        cost_usd, latency_ms, status_code, prompt_injection_score, request_id, created_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)`,
+        id, project_id, gateway_key_id, model,
+        prompt_tokens, completion_tokens, total_tokens,
+        cost_usd, latency_ms, status_code, prompt_injection_score, request_id,
+        pii_scrubbed_count, pii_scrubbing_level, request_body_scrubbed, response_body_scrubbed,
+        created_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)`,
       [
         data.id, data.projectId, data.gatewayKeyId, data.model,
         data.promptTokens, data.completionTokens, data.totalTokens,
         data.costUsd, data.latencyMs, data.statusCode, data.promptInjectionScore, data.requestId,
+        data.piiScrubbedCount || 0,
+        data.piiScrubbingLevel || null,
+        data.requestBodyScrubbed || null,
+        data.responseBodyScrubbed || null
       ]
     );
   }

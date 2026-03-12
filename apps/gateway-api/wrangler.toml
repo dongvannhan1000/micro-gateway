@@ -16,3 +16,10 @@ id = "736bbb8ca70144609f4c411ed9a414d4"
 ENVIRONMENT = "development"
 SUPABASE_URL = "https://yyfwepdlvcubthmeldir.supabase.co"
 # SUPABASE_JWT_SECRET will be added as a secret via wrangler secret put
+
+# Cron Triggers
+# Scheduled Tasks: https://developers.cloudflare.com/workers/configuration/cron-triggers/
+[[triggers.crons]]
+# Monthly usage reset: Runs at 00:00 UTC on the 1st day of every month
+# Cron expression: 0 0 1 * *
+schedule = "0 0 1 * *"

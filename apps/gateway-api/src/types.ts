@@ -21,5 +21,13 @@ export interface Variables {
     repos?: Repositories;
     promptInjectionScore?: number;
     anomalyDetected?: boolean;
+    responseBody?: any; // Captured response for logging
+    piiScrubbingConfig?: { // PII scrubbing configuration
+        enabled: boolean;
+        level: 'low' | 'medium' | 'high';
+        customPatterns?: Array<{ name: string; pattern: string; flags?: string }>;
+    };
+    piiRawRequest?: string; // Raw request body for lazy scrubbing
+    piiRawResponse?: string; // Raw response body for lazy scrubbing
 }
 

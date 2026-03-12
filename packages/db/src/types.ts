@@ -4,6 +4,9 @@ export interface Project {
     name: string;
     description?: string;
     model_aliases?: string; // JSON string: Record<string, string>
+    pii_scrubbing_enabled?: number; // Boolean (0/1 for SQLite compatibility)
+    pii_scrubbing_level?: 'low' | 'medium' | 'high';
+    pii_custom_patterns?: string; // JSON string: Custom regex patterns
     created_at: string;
     updated_at: string;
     // Aggregated stats
@@ -52,6 +55,10 @@ export interface RequestLog {
     request_id: string;
     ip_address?: string;
     user_agent?: string;
+    pii_scrubbed_count?: number; // Number of PII items scrubbed
+    pii_scrubbing_level?: string; // Scrubbing level used
+    request_body_scrubbed?: string; // Scrubbed request body
+    response_body_scrubbed?: string; // Scrubbed response body
     created_at: string;
 }
 

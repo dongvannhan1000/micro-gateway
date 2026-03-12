@@ -4,6 +4,7 @@ import { openAiError } from './errors';
 import { calculateCost } from '@ms-gateway/db';
 import { decryptProviderKey } from '../utils/crypto';
 import { PricingService } from '../services/pricing-service';
+import { scrubPIIForLogging } from '../middleware/pii-scrub';
 
 const GEMINI_OPENAI_BASE_URL = 'https://generativelanguage.googleapis.com/v1beta/openai/';
 
@@ -150,6 +151,9 @@ export async function proxyHandler(c: Context<{ Bindings: Env; Variables: Variab
             );
         }
 
+        // Store response body for PII scrubbing (before we return it)
+        c.set('responseBody', resData);
+
         const usage = resData.usage || { prompt_tokens: 0, completion_tokens: 0, total_tokens: 0 };
         const cost = await PricingService.calculate(c, targetModel, providerName, usage.prompt_tokens, usage.completion_tokens);
 
@@ -157,6 +161,9 @@ export async function proxyHandler(c: Context<{ Bindings: Env; Variables: Variab
 
         // Log request and check alerts asynchronously
         c.executionCtx.waitUntil((async () => {
+            // Lazy PII scrubbing - only scrub when actually logging
+            const piiResult = scrubPIIForLogging(c);
+
             await logRequest(
                 repos,
                 project.id,
@@ -169,7 +176,8 @@ export async function proxyHandler(c: Context<{ Bindings: Env; Variables: Variab
                 usage.completion_tokens,
                 cost,
                 resData.id,
-                injectionScore
+                injectionScore,
+                piiResult
             );
 
             // Update gateway key usage
@@ -202,7 +210,14 @@ async function logRequest(
     completionTokens: number,
     cost: number = 0,
     providerRequestId: string = '',
-    injectionScore: number = 0
+    injectionScore: number = 0,
+    piiResult?: {
+        requestScrubbed?: string;
+        responseScrubbed?: string;
+        requestCount?: number;
+        responseCount?: number;
+        totalScrubbed?: number;
+    }
 ) {
     const requestId = crypto.randomUUID();
 
@@ -220,6 +235,10 @@ async function logRequest(
             statusCode,
             promptInjectionScore: injectionScore,
             requestId: providerRequestId,
+            piiScrubbedCount: piiResult?.totalScrubbed || 0,
+            piiScrubbingLevel: 'medium', // TODO: Get from project config
+            requestBodyScrubbed: piiResult?.requestScrubbed,
+            responseBodyScrubbed: piiResult?.responseScrubbed
         });
     } catch (err) {
         console.error('[Gateway] [Logger] Failed to log request:', err);
