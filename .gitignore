@@ -40,6 +40,12 @@ tests/
 test-*.js
 test-*.json
 
+# Reports & Audit Results (local development)
+reports/
+*.md
+!README.md
+!CLAUDE.md
+
 # Backup Files
 *.nocron
 *.bak
