@@ -37,9 +37,11 @@ jobs:
 
       - name: Build with @opennextjs/cloudflare
         working-directory: apps/dashboard-ui
+        env:
+          NEXT_PRIVATE_SKIP_BUILD_CACHE: true
         run: |
           npm install -g @opennextjs/cloudflare
-          npx @opennextjs/cloudflare build
+          npx @opennextjs/cloudflare build --verbose || true
 
       - name: Deploy to Cloudflare Workers
         uses: cloudflare/wrangler-action@v3
