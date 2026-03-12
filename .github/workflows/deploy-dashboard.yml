@@ -43,7 +43,6 @@ jobs:
           npx @opennextjs/cloudflare build
 
       - name: Deploy to Cloudflare Workers
-        working-directory: apps/dashboard-ui
         uses: cloudflare/wrangler-action@v3
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
