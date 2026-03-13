@@ -8,6 +8,11 @@ let jwks: any = null;
  * Middleware to verify Supabase JWT for management API access
  */
 export async function sessionAuth(c: Context<{ Bindings: Env; Variables: Variables }>, next: Next) {
+    // Skip auth for OPTIONS requests (CORS preflight)
+    if (c.req.method === 'OPTIONS') {
+        return next();
+    }
+
     const authHeader = c.req.header('Authorization');
 
     console.log(`[GatewayService] Action: sessionAuth start (Metadata: hasHeader=${!!authHeader})`);

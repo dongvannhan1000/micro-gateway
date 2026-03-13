@@ -1,7 +1,12 @@
+'use client';
+
 import Link from 'next/link';
-import { Shield, Github, Lock, Zap, DollarSign, ArrowRight, CheckCircle2, Code, Server, Activity } from 'lucide-react';
+import { Shield, Github, Lock, Zap, DollarSign, ArrowRight, CheckCircle2, Code, Server, Activity, Smile, Mail } from 'lucide-react';
+import { WaitlistModal } from '@/components/waitlist-modal';
+import { useState } from 'react';
 
 export default function HomePage() {
+  const [isWaitlistModalOpen, setIsWaitlistModalOpen] = useState(false);
   return (
     <div className="min-h-screen">
       {/* Hero Section */}
@@ -29,7 +34,7 @@ export default function HomePage() {
           {/* CTA Buttons */}
           <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
             <a
-              href="https://github.com/yourorg/micro-gateway/blob/main/SELF_HOSTED.md"
+              href="https://github.com/dongvannhan1000/micro-gateway/blob/main/SELF_HOSTED.md"
               target="_blank"
               rel="noopener noreferrer"
               className="px-8 py-4 rounded-xl font-semibold bg-neon-gradient text-white hover:opacity-90 transition-all flex items-center gap-2"
@@ -40,7 +45,7 @@ export default function HomePage() {
             </a>
 
             <Link
-              href="https://github.com/yourorg/micro-gateway"
+              href="https://github.com/dongvannhan1000/micro-gateway"
               target="_blank"
               rel="noopener noreferrer"
               className="px-8 py-4 rounded-xl font-semibold glass hover:bg-glass-bg transition-all flex items-center gap-2"
@@ -192,7 +197,7 @@ export default function HomePage() {
                 <h3 className="font-semibold">Clone & Install</h3>
               </div>
               <code className="block bg-background p-4 rounded-lg text-sm overflow-x-auto">
-                git clone https://github.com/yourorg/micro-gateway.git<br/>
+                git clone https://github.com/dongvannhan1000/micro-gateway.git<br/>
                 cd micro-gateway && npm install
               </code>
             </div>
@@ -224,7 +229,7 @@ export default function HomePage() {
 
           <div>
             <a
-              href="https://github.com/yourorg/micro-gateway/blob/main/SELF_HOSTED.md"
+              href="https://github.com/dongvannhan1000/micro-gateway/blob/main/SELF_HOSTED.md"
               target="_blank"
               rel="noopener noreferrer"
               className="inline-flex items-center gap-2 px-8 py-4 rounded-xl font-semibold bg-neon-gradient text-white hover:opacity-90 transition-all"
@@ -248,26 +253,35 @@ export default function HomePage() {
               Want Us to Host It?
             </h2>
             <p className="text-muted text-lg max-w-2xl mx-auto">
-              Don't want to manage your own infrastructure? We offer a managed version
+              Don't want to manage your own infrastructure? Join the waitlist for our managed version
               with enhanced security features, priority support, and 99.9% uptime SLA.
             </p>
-            <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <Link
-                href="/register"
-                className="px-8 py-4 rounded-xl font-semibold bg-accent-blue/10 hover:bg-accent-blue/20 text-accent-blue border border-accent-blue/30 transition-all"
-              >
-                Start Free Trial (14 days)
-              </Link>
-              <Link
-                href="/pricing"
-                className="px-8 py-4 rounded-xl font-semibold glass hover:bg-glass-bg transition-all"
-              >
-                View Pricing
-              </Link>
+            <div className="glass-card p-8 space-y-6">
+              <div className="flex flex-col sm:flex-row gap-4">
+                <button
+                  onClick={() => setIsWaitlistModalOpen(true)}
+                  className="flex-1 px-8 py-4 rounded-xl font-semibold bg-neon-gradient text-white hover:opacity-90 transition-all flex items-center justify-center gap-2 text-lg shadow-lg hover:shadow-xl transform hover:scale-105"
+                >
+                  <Mail className="w-5 h-5" />
+                  Join the Waitlist
+                </button>
+                <Link
+                  href="/register"
+                  className="flex-1 px-8 py-4 rounded-xl font-semibold glass hover:bg-glass-bg transition-all flex items-center justify-center gap-2 text-lg shadow-lg hover:shadow-xl transform hover:scale-105 border-2 border-purple-500/30 hover:border-purple-500/50"
+                >
+                  <Smile className="w-5 h-5" />
+                  Start Free Trial - if you trust me
+                </Link>
+              </div>
+              <div className="text-center space-y-2">
+                <p className="text-sm text-muted">
+                  Get enterprise features without enterprise complexity. <strong>Simple pricing, transparent costs.</strong>
+                </p>
+                <p className="text-xs text-muted">
+                  We'll email you when early access opens. No spam, ever.
+                </p>
+              </div>
             </div>
-            <p className="text-sm text-muted">
-              Managed version: $29/month. Cancel anytime.
-            </p>
           </div>
         </div>
       </section>
@@ -327,7 +341,7 @@ export default function HomePage() {
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Link
-              href="https://github.com/yourorg/micro-gateway"
+              href="https://github.com/dongvannhan1000/micro-gateway"
               target="_blank"
               rel="noopener noreferrer"
               className="px-8 py-4 rounded-xl font-semibold bg-neon-gradient text-white hover:opacity-90 transition-all flex items-center justify-center gap-2"
@@ -336,7 +350,7 @@ export default function HomePage() {
               Star on GitHub
             </Link>
             <a
-              href="https://github.com/yourorg/micro-gateway/blob/main/SELF_HOSTED.md"
+              href="https://github.com/dongvannhan1000/micro-gateway/blob/main/SELF_HOSTED.md"
               target="_blank"
               rel="noopener noreferrer"
               className="px-8 py-4 rounded-xl font-semibold glass hover:bg-glass-bg transition-all flex items-center justify-center gap-2"
@@ -365,6 +379,12 @@ export default function HomePage() {
         <Activity size={14} className="text-green-400" />
         <span>Gateway Status: <span className="text-green-400 font-medium">Operational</span></span>
       </div>
+
+      {/* Waitlist Modal */}
+      <WaitlistModal
+        isOpen={isWaitlistModalOpen}
+        onClose={() => setIsWaitlistModalOpen(false)}
+      />
     </div>
   );
 }

@@ -5,6 +5,7 @@ import { ProviderConfigRepository } from './provider-config.repository';
 import { RequestLogRepository } from './request-log.repository';
 import { AlertRepository } from './alert.repository';
 import { PricingRepository } from './pricing.repository';
+import { WaitlistRepository } from './waitlist.repository';
 
 export { D1Adapter } from './d1-adapter';
 
@@ -15,6 +16,7 @@ export interface Repositories {
   requestLog: RequestLogRepository;
   alert: AlertRepository;
   pricing: PricingRepository;
+  waitlist: WaitlistRepository;
 }
 
 /**
@@ -29,6 +31,7 @@ export function createRepositories(db: DatabaseAdapter): Repositories {
     requestLog: new RequestLogRepository(db),
     alert: new AlertRepository(db),
     pricing: new PricingRepository(db),
+    waitlist: new WaitlistRepository(db),
   };
 }
 
@@ -39,3 +42,4 @@ export { ProviderConfigRepository } from './provider-config.repository';
 export { RequestLogRepository } from './request-log.repository';
 export { AlertRepository } from './alert.repository';
 export { PricingRepository } from './pricing.repository';
+export { WaitlistRepository } from './waitlist.repository';

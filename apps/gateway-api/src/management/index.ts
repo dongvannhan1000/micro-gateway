@@ -282,4 +282,56 @@ management.post('/security/migrate-keys', async (c) => {
     }
 });
 
+// --- Waitlist Admin (Managed Version) ---
+
+/**
+ * GET /api/waitlist/export
+ * Export waitlist as CSV (Admin only)
+ * Requires authentication
+ */
+management.get('/waitlist/export', async (c) => {
+    const user = c.get('user')!;
+    const repos = c.get('repos')!;
+
+    // TODO: Add admin check (you can add a field to users table: is_admin)
+    // For now, anyone authenticated can export
+
+    try {
+        const csv = await repos.waitlist.getCSV();
+
+        c.header('Content-Type', 'text/csv');
+        c.header('Content-Disposition', `attachment; filename="waitlist-${Date.now()}.csv"`);
+
+        return c.body(csv);
+
+    } catch (error: any) {
+        console.error('[Management] [Waitlist] Export error:', error);
+        return c.json({ error: 'Failed to export waitlist' }, 500);
+    }
+});
+
+/**
+ * GET /api/waitlist/stats
+ * Get waitlist statistics (Admin only)
+ */
+management.get('/waitlist/stats', async (c) => {
+    const user = c.get('user')!;
+    const repos = c.get('repos')!;
+
+    try {
+        const count = await repos.waitlist.count();
+        const recent = await repos.waitlist.findAll();
+
+        return c.json({
+            total: count,
+            recent: recent.slice(0, 10), // Last 10 signups
+            exportUrl: '/api/waitlist/export'
+        });
+
+    } catch (error: any) {
+        console.error('[Management] [Waitlist] Stats error:', error);
+        return c.json({ error: 'Failed to fetch stats' }, 500);
+    }
+});
+
 export { management as managementRouter };

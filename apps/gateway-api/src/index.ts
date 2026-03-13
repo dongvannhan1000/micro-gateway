@@ -2,6 +2,7 @@ import { Hono } from 'hono';
 import { Env, Variables } from './types';
 import { gatewayRouter } from './gateway';
 import { managementRouter } from './management';
+import { publicAPIRouter } from './public';
 import { injectDatabase } from './middleware/inject-db';
 import { scheduled } from './cron/monthly-reset';
 
@@ -81,8 +82,9 @@ app.get('/health', (c) => c.json({
 }));
 
 // Mount Routers
-app.route('/v1', gatewayRouter);      // OpenAI-compatible Proxy
-app.route('/api', managementRouter);  // Internal Management API
+app.route('/v1', gatewayRouter);        // OpenAI-compatible Proxy
+app.route('/api', publicAPIRouter);     // Public API (no auth required)
+app.route('/api', managementRouter);    // Internal Management API (requires auth)
 
 // Export default app for HTTP requests
 export default app;
