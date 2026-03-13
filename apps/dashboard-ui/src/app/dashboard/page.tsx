@@ -44,7 +44,7 @@ export default async function DashboardPage() {
                 </div>
             ) : error ? (
                 <EmptyState
-                    icon={Activity}
+                    icon="Activity"
                     title="Unable to Load Projects"
                     description={error}
                 />
@@ -93,7 +93,7 @@ export default async function DashboardPage() {
                     ) : (
                         <div className="col-span-full">
                             <EmptyState
-                                icon={Plus}
+                                icon="Plus"
                                 title="No projects yet"
                                 description="Create your first gateway project to start monitoring your AI API usage and costs."
                                 action={{
