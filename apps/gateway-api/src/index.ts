@@ -38,6 +38,20 @@ app.use('*', injectDatabase);
 app.use('*', async (c, next) => {
   await next();
 
+  // CORS Headers - Allow requests from dashboard
+  const origin = c.req.header('Origin');
+  if (origin) {
+    c.header('Access-Control-Allow-Origin', origin);
+    c.header('Access-Control-Allow-Credentials', 'true');
+    c.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+    c.header('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+  }
+
+  // Handle preflight requests
+  if (c.req.method === 'OPTIONS') {
+    return c.text('', 204);
+  }
+
   // Prevent MIME type sniffing
   c.header('X-Content-Type-Options', 'nosniff');
 
