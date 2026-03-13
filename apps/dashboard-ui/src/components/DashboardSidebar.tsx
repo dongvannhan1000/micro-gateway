@@ -12,10 +12,12 @@ import {
     ChevronLeft,
     ChevronRight,
     Plus,
-    Bell
+    Bell,
+    Menu,
+    X
 } from 'lucide-react';
 import { logout } from '@/app/login/actions';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 
@@ -35,15 +37,65 @@ const navItems = [
 export function DashboardSidebar() {
     const pathname = usePathname();
     const [isCollapsed, setIsCollapsed] = useState(false);
+    const [isMobileOpen, setIsMobileOpen] = useState(false);
+    const [isMobile, setIsMobile] = useState(false);
+
+    // Detect mobile viewport
+    useEffect(() => {
+        const checkMobile = () => {
+            setIsMobile(window.innerWidth < 1024);
+            if (window.innerWidth >= 1024) {
+                setIsMobileOpen(false);
+            }
+        };
+
+        checkMobile();
+        window.addEventListener('resize', checkMobile);
+        return () => window.removeEventListener('resize', checkMobile);
+    }, []);
+
+    // Close mobile menu when route changes
+    useEffect(() => {
+        if (isMobile) {
+            setIsMobileOpen(false);
+        }
+    }, [pathname, isMobile]);
 
     return (
-        <aside
-            onClick={() => setIsCollapsed(!isCollapsed)}
-            className={cn(
-                "h-screen glass-card rounded-none border-y-0 border-l-0 transition-all duration-300 ease-in-out flex flex-col z-50 relative cursor-pointer group/sidebar select-none",
-                isCollapsed ? "w-20" : "w-64"
+        <>
+            {/* Mobile overlay */}
+            {isMobile && isMobileOpen && (
+                <div
+                    className="fixed inset-0 bg-black/50 z-40 lg:hidden"
+                    onClick={() => setIsMobileOpen(false)}
+                />
             )}
-        >
+
+            {/* Mobile menu button */}
+            {isMobile && (
+                <button
+                    onClick={() => setIsMobileOpen(!isMobileOpen)}
+                    className="lg:hidden fixed top-4 left-4 z-50 p-2 glass rounded-lg hover:bg-glass-bg transition-colors"
+                    aria-label="Toggle menu"
+                >
+                    {isMobileOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+                </button>
+            )}
+
+            <aside
+                onClick={() => !isMobile && setIsCollapsed(!isCollapsed)}
+                className={cn(
+                    "h-screen glass-card rounded-none border-y-0 border-l-0 transition-all duration-300 ease-in-out flex flex-col z-50 relative cursor-pointer group/sidebar select-none sticky top-0",
+                    isMobile ? (
+                        isMobileOpen
+                            ? "fixed w-64 translate-x-0"
+                            : "fixed w-64 -translate-x-full"
+                    ) : (
+                        isCollapsed ? "w-20" : "w-64"
+                    ),
+                    "lg:translate-x-0 lg:sticky lg:top-0"
+                )}
+            >
             <div className={cn(
                 "h-20 flex items-center transition-all duration-300",
                 isCollapsed ? "justify-center px-0" : "px-6 gap-3"
@@ -124,15 +176,19 @@ export function DashboardSidebar() {
                 </button>
             </div>
 
-            <button
-                onClick={(e: React.MouseEvent) => {
-                    e.stopPropagation();
-                    setIsCollapsed(!isCollapsed);
-                }}
-                className="absolute -right-3 top-20 w-6 h-6 bg-glass-bg border border-glass-border rounded-full flex items-center justify-center text-muted hover:text-white z-50 shadow-xl backdrop-blur-md opacity-0 group-hover/sidebar:opacity-100 transition-opacity"
-            >
-                {isCollapsed ? <ChevronRight className="w-3 h-3" /> : <ChevronLeft className="w-3 h-3" />}
-            </button>
+            {/* Collapse toggle - hide on mobile */}
+            {!isMobile && (
+                <button
+                    onClick={(e: React.MouseEvent) => {
+                        e.stopPropagation();
+                        setIsCollapsed(!isCollapsed);
+                    }}
+                    className="absolute -right-3 top-20 w-6 h-6 bg-glass-bg border border-glass-border rounded-full flex items-center justify-center text-muted hover:text-white z-50 shadow-xl backdrop-blur-md opacity-0 group-hover/sidebar:opacity-100 transition-opacity"
+                >
+                    {isCollapsed ? <ChevronRight className="w-3 h-3" /> : <ChevronLeft className="w-3 h-3" />}
+                </button>
+            )}
         </aside>
+        </>
     );
 }

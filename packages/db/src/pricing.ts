@@ -4,7 +4,59 @@ export interface ModelPrice {
 }
 
 export const PRICING: Record<string, ModelPrice> = {
-    // Gemini Models (Google AI Studio)
+    // OpenAI Models
+    'gpt-4o': {
+        input_per_1m: 2.5,
+        output_per_1m: 10.0
+    },
+    'gpt-4o-mini': {
+        input_per_1m: 0.15,
+        output_per_1m: 0.6
+    },
+    'gpt-4-turbo': {
+        input_per_1m: 10.0,
+        output_per_1m: 30.0
+    },
+    'gpt-4': {
+        input_per_1m: 30.0,
+        output_per_1m: 60.0
+    },
+    'gpt-3.5-turbo': {
+        input_per_1m: 0.5,
+        output_per_1m: 1.5
+    },
+    'o1-preview': {
+        input_per_1m: 15.0,
+        output_per_1m: 60.0
+    },
+    'o1-mini': {
+        input_per_1m: 3.0,
+        output_per_1m: 12.0
+    },
+
+    // Anthropic Models
+    'claude-3-opus-20240229': {
+        input_per_1m: 15.0,
+        output_per_1m: 75.0
+    },
+    'claude-3-sonnet-20240229': {
+        input_per_1m: 3.0,
+        output_per_1m: 15.0
+    },
+    'claude-3-haiku-20240307': {
+        input_per_1m: 0.25,
+        output_per_1m: 1.25
+    },
+    'claude-3-5-sonnet-20241022': {
+        input_per_1m: 3.0,
+        output_per_1m: 15.0
+    },
+    'claude-3-5-haiku-20241022': {
+        input_per_1m: 0.8,
+        output_per_1m: 4.0
+    },
+
+    // Google Models
     'gemini-1.5-flash': {
         input_per_1m: 0.075,
         output_per_1m: 0.3
@@ -17,15 +69,23 @@ export const PRICING: Record<string, ModelPrice> = {
         input_per_1m: 0.1,
         output_per_1m: 0.4
     },
-
-    // OpenAI Models (for aliasing comparison)
-    'gpt-4o': {
-        input_per_1m: 2.5,
-        output_per_1m: 10.0
+    'gemini-pro': {
+        input_per_1m: 0.5,
+        output_per_1m: 1.5
     },
-    'gpt-4o-mini': {
-        input_per_1m: 0.15,
-        output_per_1m: 0.6
+    'gemini-pro-vision': {
+        input_per_1m: 0.5,
+        output_per_1m: 1.5
+    },
+
+    // DeepSeek Models
+    'deepseek-chat': {
+        input_per_1m: 0.14,
+        output_per_1m: 0.28
+    },
+    'deepseek-coder': {
+        input_per_1m: 0.14,
+        output_per_1m: 0.28
     }
 };
 

@@ -34,7 +34,7 @@ export interface GatewayKey {
 export interface ProviderConfig {
     id: string;
     project_id: string;
-    provider: 'openai' | 'anthropic' | 'google';
+    provider: 'openai' | 'anthropic' | 'google' | 'deepseek' | 'groq' | 'together';
     api_key_encrypted: string;
     is_default: boolean;
     created_at: string;

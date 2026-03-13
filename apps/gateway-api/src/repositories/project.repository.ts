@@ -48,15 +48,23 @@ export class ProjectRepository {
     );
   }
 
-  async update(id: string, userId: string, data: { name?: string; description?: string; model_aliases?: string }): Promise<number> {
+  async update(id: string, userId: string, data: {
+    name?: string;
+    description?: string;
+    model_aliases?: string;
+    pii_scrubbing_level?: 'low' | 'medium' | 'high';
+    pii_scrubbing_enabled?: number;
+  }): Promise<number> {
     const { changes } = await this.db.run(
-      `UPDATE projects 
-       SET name = COALESCE(?, name), 
+      `UPDATE projects
+       SET name = COALESCE(?, name),
            description = COALESCE(?, description),
            model_aliases = COALESCE(?, model_aliases),
+           pii_scrubbing_level = COALESCE(?, pii_scrubbing_level),
+           pii_scrubbing_enabled = COALESCE(?, pii_scrubbing_enabled),
            updated_at = CURRENT_TIMESTAMP
        WHERE id = ? AND user_id = ?`,
-      [data.name, data.description, data.model_aliases, id, userId]
+      [data.name, data.description, data.model_aliases, data.pii_scrubbing_level, data.pii_scrubbing_enabled, id, userId]
     );
     return changes;
   }

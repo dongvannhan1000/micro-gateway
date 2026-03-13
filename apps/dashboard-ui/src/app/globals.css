@@ -142,3 +142,113 @@ body {
 .custom-scrollbar::-webkit-scrollbar-thumb:hover {
   background: var(--muted);
 }
+
+/* ═══════════════════════════════════════════════════════
+   Mobile Responsive Utilities
+   ═══════════════════════════════════════════════════════ */
+
+/* Mobile-first responsive containers */
+@container (min-width: 640px) {
+  .responsive-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@container (min-width: 1024px) {
+  .responsive-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+/* Improved table scrolling for mobile */
+.table-container {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.table-container table {
+  min-width: 100%;
+}
+
+@media (max-width: 768px) {
+  .table-container table {
+    min-width: 600px;
+  }
+}
+
+/* Mobile-friendly touch targets */
+@media (max-width: 768px) {
+  button, a {
+    min-height: 44px;
+    min-width: 44px;
+  }
+
+  /* Smaller text on mobile */
+  .text-mobile-sm {
+    font-size: 0.875rem;
+  }
+
+  /* Compact cards on mobile */
+  .glass-card {
+    padding: 1rem;
+  }
+}
+
+/* ═══════════════════════════════════════════════════════
+   Button & Input Utilities
+   ═══════════════════════════════════════════════════════ */
+
+.btn-primary {
+  background: linear-gradient(135deg, var(--accent-blue), var(--accent-violet));
+  color: white;
+  font-weight: 600;
+  padding: 0.75rem 2rem;
+  border-radius: 12px;
+  border: none;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 15px rgba(77, 159, 255, 0.3);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+}
+
+.btn-primary:hover:not(:disabled) {
+  box-shadow: 0 6px 25px rgba(77, 159, 255, 0.5);
+  transform: translateY(-2px);
+}
+
+.btn-primary:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.input-field {
+  width: 100%;
+  background: var(--glass-bg);
+  backdrop-filter: blur(10px);
+  border: 1px solid var(--glass-border);
+  border-radius: 12px;
+  padding: 0.75rem 1rem;
+  color: var(--foreground);
+  font-size: 0.875rem;
+  transition: all 0.3s ease;
+}
+
+.input-field:focus {
+  outline: none;
+  border-color: var(--accent-blue);
+  box-shadow: 0 0 0 3px rgba(77, 159, 255, 0.1);
+}
+
+.input-field::placeholder {
+  color: var(--muted);
+  opacity: 0.5;
+}
+
+.input-field:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}

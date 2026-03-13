@@ -118,7 +118,7 @@ export async function proxyHandler(c: Context<{ Bindings: Env; Variables: Variab
                     await writer.close();
 
                     // Log request (Simplified for streaming in Sprint 1)
-                    await logRequest(repos, project.id, gatewayKey.id, requestedModel, targetModel, 200, latency, 0, 0);
+                    await logRequest(repos, project, project.id, gatewayKey.id, requestedModel, targetModel, 200, latency, 0, 0);
 
                     // Check alerts
                     const { checkAlerts } = await import('../services/alert-engine');
@@ -166,6 +166,7 @@ export async function proxyHandler(c: Context<{ Bindings: Env; Variables: Variab
 
             await logRequest(
                 repos,
+                project,
                 project.id,
                 gatewayKey.id,
                 requestedModel,
@@ -200,6 +201,7 @@ export async function proxyHandler(c: Context<{ Bindings: Env; Variables: Variab
 
 async function logRequest(
     repos: NonNullable<Variables['repos']>,
+    project: any,
     projectId: string,
     gatewayKeyId: string,
     requestedModel: string,
@@ -222,6 +224,9 @@ async function logRequest(
     const requestId = crypto.randomUUID();
 
     try {
+        // Get PII scrubbing level from project config (defaults to 'medium')
+        const piiScrubbingLevel = project.pii_scrubbing_level || 'medium';
+
         await repos.requestLog.create({
             id: requestId,
             projectId,
@@ -236,7 +241,7 @@ async function logRequest(
             promptInjectionScore: injectionScore,
             requestId: providerRequestId,
             piiScrubbedCount: piiResult?.totalScrubbed || 0,
-            piiScrubbingLevel: 'medium', // TODO: Get from project config
+            piiScrubbingLevel: piiScrubbingLevel,
             requestBodyScrubbed: piiResult?.requestScrubbed,
             responseBodyScrubbed: piiResult?.responseScrubbed
         });

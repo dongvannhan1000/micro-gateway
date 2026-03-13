@@ -78,13 +78,25 @@ management.put('/projects/:id', async (c) => {
     const user = c.get('user')!;
     const repos = c.get('repos')!;
     const id = c.req.param('id');
-    const { name, description, model_aliases } = await c.req.json();
+    const { name, description, model_aliases, pii_scrubbing_level, pii_scrubbing_enabled } = await c.req.json();
+
+    // Validate pii_scrubbing_level if provided
+    if (pii_scrubbing_level && !['low', 'medium', 'high'].includes(pii_scrubbing_level)) {
+        return c.json({ error: 'Invalid pii_scrubbing_level. Must be one of: low, medium, high' }, 400);
+    }
 
     try {
-        const changes = await repos.project.update(id, user.id, { name, description, model_aliases });
+        const changes = await repos.project.update(id, user.id, {
+            name,
+            description,
+            model_aliases,
+            pii_scrubbing_level,
+            pii_scrubbing_enabled
+        });
         if (changes === 0) return c.json({ error: 'Project not found' }, 404);
         return c.json({ success: true });
     } catch (err) {
+        console.error('[Management] Failed to update project:', err);
         return c.json({ error: 'Failed to update project' }, 500);
     }
 });
