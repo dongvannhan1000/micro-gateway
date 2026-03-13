@@ -550,8 +550,14 @@ describe('Integration: Full Request Flow', () => {
                 })
             }, createRequestOptions(mockEnv));
 
-            // Should fail open and allow request
-            expect(response.status).toBe(200);
+            // SECURITY: Should fail closed and block request (fail-closed behavior)
+            expect(response.status).toBe(503);
+            expect(await response.json()).toMatchObject({
+                error: expect.objectContaining({
+                    type: 'service',
+                    code: 'rate_limit_error'
+                })
+            });
         });
     });
 
