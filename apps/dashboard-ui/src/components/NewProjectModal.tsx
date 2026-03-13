@@ -1,6 +1,7 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useSearchParams, useRouter } from 'next/navigation';
 import { Modal } from '@/components/Modal';
 import { createProject } from '@/app/dashboard/actions';
 import { Plus, Loader2 } from 'lucide-react';
@@ -9,6 +10,19 @@ export function NewProjectModal() {
     const [isOpen, setIsOpen] = useState(false);
     const [isPending, setIsPending] = useState(false);
     const [error, setError] = useState<string | null>(null);
+    const searchParams = useSearchParams();
+    const router = useRouter();
+
+    useEffect(() => {
+        if (searchParams.get('new') === 'project') {
+            setIsOpen(true);
+            // Clear parameter without reloading to prevent reopening on subsequent views
+            const params = new URLSearchParams(searchParams.toString());
+            params.delete('new');
+            const newQuery = params.toString();
+            router.replace(`/dashboard${newQuery ? `?${newQuery}` : ''}`, { scroll: false });
+        }
+    }, [searchParams, router]);
 
     const handleSubmit = async (formData: FormData) => {
         setIsPending(true);

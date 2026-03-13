@@ -46,12 +46,12 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
     if (!project) {
         return (
             <EmptyState
-                icon={Activity}
+                icon="Activity"
                 title="Project not found"
                 description="The project you're looking for doesn't exist or you don't have access to it."
                 action={{
                     label: 'Back to Projects',
-                    onClick: () => window.location.href = '/dashboard',
+                    href: '/dashboard',
                     variant: 'secondary'
                 }}
             />

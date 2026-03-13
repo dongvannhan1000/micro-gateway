@@ -98,7 +98,7 @@ export default async function DashboardPage() {
                                 description="Create your first gateway project to start monitoring your AI API usage and costs."
                                 action={{
                                     label: 'Create First Project',
-                                    onClick: () => document.querySelector('[data-new-project-modal]')?.dispatchEvent(new Event('click')),
+                                    href: '/dashboard?new=project',
                                     variant: 'primary'
                                 }}
                             />
