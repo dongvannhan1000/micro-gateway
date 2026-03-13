@@ -12,18 +12,15 @@ export default function LoginPage() {
     async function handleSubmit(formData: FormData) {
         setIsPending(true);
         setError(null);
-        try {
-            // Small delay for UX feel
-            await new Promise(resolve => setTimeout(resolve, 500));
-            const result = await login(formData);
-            if (result?.error) {
-                setError(result.error);
-            }
-        } catch (e) {
-            setError('An unexpected error occurred');
-        } finally {
-            setIsPending(false);
+
+        // Small delay for UX feel
+        await new Promise(resolve => setTimeout(resolve, 500));
+        const result = await login(formData);
+        if (result?.error) {
+            setError(result.error);
         }
+
+        setIsPending(false);
     }
 
     return (

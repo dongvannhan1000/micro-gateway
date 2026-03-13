@@ -13,18 +13,15 @@ export default function RegisterPage() {
     async function handleSubmit(formData: FormData) {
         setIsPending(true);
         setError(null);
-        try {
-            const result = await signup(formData);
-            if (result?.error) {
-                setError(result.error);
-            } else {
-                setIsSuccess(true);
-            }
-        } catch (e) {
-            setError('An unexpected error occurred');
-        } finally {
-            setIsPending(false);
+
+        const result = await signup(formData);
+        if (result?.error) {
+            setError(result.error);
+        } else {
+            setIsSuccess(true);
         }
+
+        setIsPending(false);
     }
 
     if (isSuccess) {
