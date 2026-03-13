@@ -122,7 +122,7 @@ describe('PENETRATION TEST: JWT Exploitation Attempts', () => {
                 aud: 'authenticated'
             })
                 .setProtectedHeader({ alg: 'HS256' })
-                .setIssuedAt(Date.now())
+                .setIssuedAt(Date.now() / 1000 - 1) // 1 second ago to avoid timing issues
                 // No expiration set
                 .setIssuer(`${mockEnv.SUPABASE_URL}/auth/v1`)
                 .sign(new TextEncoder().encode(mockEnv.SUPABASE_JWT_SECRET!));
@@ -145,7 +145,7 @@ describe('PENETRATION TEST: JWT Exploitation Attempts', () => {
                 aud: 'authenticated'
             })
                 .setProtectedHeader({ alg: 'HS256' })
-                .setIssuedAt(Date.now())
+                .setIssuedAt(Date.now() / 1000 - 1) // 1 second ago to avoid timing issues
                 .setExpirationTime('1h')
                 .setIssuer('https://malicious.com/auth/v1') // Wrong issuer
                 .sign(new TextEncoder().encode(mockEnv.SUPABASE_JWT_SECRET!));
@@ -171,7 +171,7 @@ describe('PENETRATION TEST: JWT Exploitation Attempts', () => {
                 aud: 'authenticated'
             })
                 .setProtectedHeader({ alg: 'HS256' })
-                .setIssuedAt(Date.now())
+                .setIssuedAt(Date.now() / 1000 - 1) // 1 second ago to avoid timing issues
                 .setExpirationTime('1h')
                 // No issuer set
                 .sign(new TextEncoder().encode(mockEnv.SUPABASE_JWT_SECRET!));
@@ -193,7 +193,7 @@ describe('PENETRATION TEST: JWT Exploitation Attempts', () => {
                 aud: 'admin' // Wrong audience
             })
                 .setProtectedHeader({ alg: 'HS256' })
-                .setIssuedAt(Date.now())
+                .setIssuedAt(Date.now() / 1000 - 1) // 1 second ago to avoid timing issues
                 .setExpirationTime('1h')
                 .setIssuer(`${mockEnv.SUPABASE_URL}/auth/v1`)
                 .sign(new TextEncoder().encode(mockEnv.SUPABASE_JWT_SECRET!));
@@ -219,7 +219,7 @@ describe('PENETRATION TEST: JWT Exploitation Attempts', () => {
                 // No audience
             })
                 .setProtectedHeader({ alg: 'HS256' })
-                .setIssuedAt(Date.now())
+                .setIssuedAt(Date.now() / 1000 - 1) // 1 second ago to avoid timing issues
                 .setExpirationTime('1h')
                 .setIssuer(`${mockEnv.SUPABASE_URL}/auth/v1`)
                 .sign(new TextEncoder().encode(mockEnv.SUPABASE_JWT_SECRET!));
@@ -242,7 +242,7 @@ describe('PENETRATION TEST: JWT Exploitation Attempts', () => {
                 aud: 'authenticated'
             })
                 .setProtectedHeader({ alg: 'none' })
-                .setIssuedAt(Date.now())
+                .setIssuedAt(Date.now() / 1000 - 1) // 1 second ago to avoid timing issues
                 .setExpirationTime('1h')
                 .setIssuer(`${mockEnv.SUPABASE_URL}/auth/v1`)
                 .sign(new TextEncoder().encode(''));
@@ -269,7 +269,7 @@ describe('PENETRATION TEST: JWT Exploitation Attempts', () => {
                 aud: 'authenticated'
             })
                 .setProtectedHeader({ alg: 'HS256' })
-                .setIssuedAt(Date.now())
+                .setIssuedAt(Date.now() / 1000 - 1) // 1 second ago to avoid timing issues
                 .setExpirationTime('1h')
                 .setIssuer(`${mockEnv.SUPABASE_URL}/auth/v1`)
                 .sign(new TextEncoder().encode('attacker-secret'));
@@ -293,7 +293,7 @@ describe('PENETRATION TEST: JWT Exploitation Attempts', () => {
                 aud: 'authenticated'
             })
                 .setProtectedHeader({ alg: 'HS256' })
-                .setIssuedAt(Date.now())
+                .setIssuedAt(Date.now() / 1000 - 1) // 1 second ago to avoid timing issues
                 .setExpirationTime('1h')
                 .setIssuer(`${mockEnv.SUPABASE_URL}/auth/v1`)
                 .sign(new TextEncoder().encode(mockEnv.SUPABASE_JWT_SECRET!));
@@ -322,7 +322,7 @@ describe('PENETRATION TEST: JWT Exploitation Attempts', () => {
                 aud: 'authenticated'
             })
                 .setProtectedHeader({ alg: 'HS256' })
-                .setIssuedAt(Date.now())
+                .setIssuedAt(Date.now() / 1000 - 1) // 1 second ago to avoid timing issues
                 .setExpirationTime('1h')
                 .setIssuer(`${mockEnv.SUPABASE_URL}/auth/v1`)
                 .sign(new TextEncoder().encode(mockEnv.SUPABASE_JWT_SECRET!));
@@ -347,7 +347,7 @@ describe('PENETRATION TEST: JWT Exploitation Attempts', () => {
                 aud: 'authenticated'
             })
                 .setProtectedHeader({ alg: 'HS256' })
-                .setIssuedAt(Date.now())
+                .setIssuedAt(Date.now() / 1000 - 1) // 1 second ago to avoid timing issues
                 .setExpirationTime('1h')
                 .setIssuer(`${mockEnv.SUPABASE_URL}/auth/v1`)
                 .sign(new TextEncoder().encode(mockEnv.SUPABASE_JWT_SECRET!));
@@ -367,7 +367,7 @@ describe('PENETRATION TEST: JWT Exploitation Attempts', () => {
                 aud: 'authenticated'
             })
                 .setProtectedHeader({ alg: 'HS256' })
-                .setIssuedAt(Date.now())
+                .setIssuedAt(Date.now() / 1000 - 1) // 1 second ago to avoid timing issues
                 .setExpirationTime('1h')
                 .setIssuer(`${mockEnv.SUPABASE_URL}/auth/v1`)
                 .sign(new TextEncoder().encode(mockEnv.SUPABASE_JWT_SECRET!));
@@ -389,7 +389,7 @@ describe('PENETRATION TEST: JWT Exploitation Attempts', () => {
                 aud: 'authenticated'
             })
                 .setProtectedHeader({ alg: 'HS256' })
-                .setIssuedAt(Date.now())
+                .setIssuedAt(Date.now() / 1000 - 1) // 1 second ago to avoid timing issues
                 .setExpirationTime('1h')
                 .setIssuer(`${mockEnv.SUPABASE_URL}/auth/v1`)
                 .sign(new TextEncoder().encode(mockEnv.SUPABASE_JWT_SECRET!));
@@ -420,7 +420,7 @@ describe('PENETRATION TEST: JWT Exploitation Attempts', () => {
                 aud: 'authenticated'
             })
                 .setProtectedHeader({ alg: 'HS256' })
-                .setIssuedAt(Date.now())
+                .setIssuedAt(Date.now() / 1000 - 1) // 1 second ago to avoid timing issues
                 .setExpirationTime('1h')
                 .setIssuer(`${mockEnv.SUPABASE_URL}/auth/v1`)
                 .sign(new TextEncoder().encode(mockEnv.SUPABASE_JWT_SECRET!));

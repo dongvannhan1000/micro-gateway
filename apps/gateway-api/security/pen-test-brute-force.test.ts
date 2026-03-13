@@ -336,10 +336,15 @@ describe('PENETRATION TEST: Authentication Brute Force', () => {
             );
 
             const context = createMockContext('192.168.1.100');
+            // Make waitUntil handle the rejection
+            context.executionCtx.waitUntil = vi.fn((promise: Promise<any>) => {
+                promise.catch(() => {}); // Suppress unhandled rejection
+            });
             const next = createMockNext();
 
             // Should not throw
-            await expect(ipRateLimiter(context, next)).resolves.not.toThrow();
+            await ipRateLimiter(context, next);
+            expect(next).toHaveBeenCalled();
         });
     });
 

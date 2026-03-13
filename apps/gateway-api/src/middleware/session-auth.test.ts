@@ -22,6 +22,7 @@ describe('sessionAuth - Security Fixes', () => {
                 },
                 method: 'GET'
             },
+            env: mockEnv,
             set: (key: string, value: any) => {},
             json: (data: any, status?: number) => ({
                 status: status || 200,
@@ -56,7 +57,9 @@ describe('sessionAuth - Security Fixes', () => {
             // Create valid token (exp in the future)
             const validToken = await new SignJWT({ sub: 'user-123', email: 'test@example.com' })
                 .setProtectedHeader({ alg: 'HS256' })
-                .setIssuedAt(Date.now() / 1000)
+                .setIssuer(`${mockEnv.SUPABASE_URL}/auth/v1`) // Add issuer
+                .setAudience('authenticated') // Add audience
+                .setIssuedAt(Date.now() / 1000 - 1) // 1 second ago to avoid timing issues
                 .setExpirationTime(Date.now() / 1000 + 3600) // 1 hour from now
                 .sign(new TextEncoder().encode(mockEnv.SUPABASE_JWT_SECRET));
 
@@ -105,7 +108,7 @@ describe('sessionAuth - Security Fixes', () => {
             const wrongIssuerToken = await new SignJWT({ sub: 'user-123', email: 'test@example.com' })
                 .setProtectedHeader({ alg: 'HS256' })
                 .setIssuer('https://malicious.com/auth/v1') // Wrong issuer
-                .setIssuedAt(Date.now() / 1000)
+                .setIssuedAt(Date.now() / 1000 - 1) // 1 second ago to avoid timing issues
                 .setExpirationTime(Date.now() / 1000 + 3600)
                 .sign(new TextEncoder().encode(mockEnv.SUPABASE_JWT_SECRET));
 
@@ -126,7 +129,8 @@ describe('sessionAuth - Security Fixes', () => {
             const correctIssuerToken = await new SignJWT({ sub: 'user-123', email: 'test@example.com' })
                 .setProtectedHeader({ alg: 'HS256' })
                 .setIssuer(`${mockEnv.SUPABASE_URL}/auth/v1`) // Correct issuer
-                .setIssuedAt(Date.now() / 1000)
+                .setAudience('authenticated') // Add audience
+                .setIssuedAt(Date.now() / 1000 - 1) // 1 second ago to avoid timing issues
                 .setExpirationTime(Date.now() / 1000 + 3600)
                 .sign(new TextEncoder().encode(mockEnv.SUPABASE_JWT_SECRET));
 
@@ -155,7 +159,7 @@ describe('sessionAuth - Security Fixes', () => {
             const wrongAudienceToken = await new SignJWT({ sub: 'user-123', email: 'test@example.com' })
                 .setProtectedHeader({ alg: 'HS256' })
                 .setAudience('wrong-audience') // Wrong audience
-                .setIssuedAt(Date.now() / 1000)
+                .setIssuedAt(Date.now() / 1000 - 1) // 1 second ago to avoid timing issues
                 .setExpirationTime(Date.now() / 1000 + 3600)
                 .sign(new TextEncoder().encode(mockEnv.SUPABASE_JWT_SECRET));
 
@@ -175,8 +179,9 @@ describe('sessionAuth - Security Fixes', () => {
             // Create token with correct audience
             const correctAudienceToken = await new SignJWT({ sub: 'user-123', email: 'test@example.com' })
                 .setProtectedHeader({ alg: 'HS256' })
+                .setIssuer(`${mockEnv.SUPABASE_URL}/auth/v1`) // Add issuer
                 .setAudience('authenticated') // Correct audience
-                .setIssuedAt(Date.now() / 1000)
+                .setIssuedAt(Date.now() / 1000 - 1) // 1 second ago to avoid timing issues
                 .setExpirationTime(Date.now() / 1000 + 3600)
                 .sign(new TextEncoder().encode(mockEnv.SUPABASE_JWT_SECRET));
 

@@ -66,6 +66,11 @@ export async function sessionAuth(c: Context<{ Bindings: Env; Variables: Variabl
             throw new Error(`Unsupported algorithm: ${header.alg}`);
         }
 
+        // SECURITY: Ensure token has expiration claim
+        if (!payload.exp) {
+            throw new Error('Invalid payload: exp claim is required');
+        }
+
         if (!payload || !payload.sub) {
             throw new Error('Invalid payload: sub field missing');
         }
