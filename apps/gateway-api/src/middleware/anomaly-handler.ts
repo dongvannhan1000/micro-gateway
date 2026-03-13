@@ -1,7 +1,7 @@
 import { Context, Next } from 'hono';
 import { Env, Variables } from '../types';
 import { detectAnomaly } from '../services/anomaly-detector';
-import { openAiError } from '../utils/errors';
+import { openAiError } from '../gateway/errors';
 
 /**
  * SECURITY: Middleware to detect and BLOCK request anomalies.
@@ -26,8 +26,9 @@ export async function anomalyHandler(c: Context<{ Bindings: Env; Variables: Vari
                 const repos = c.get('repos');
                 if (repos) {
                     await repos.securityViolation.create({
-                        project_id: project.id,
-                        violation_type: 'anomaly',
+                        id: crypto.randomUUID(),
+                        projectId: project.id,
+                        violationType: 'anomaly',
                         severity: 'high',
                         description: reason || 'Anomalous activity pattern detected',
                         metadata: JSON.stringify({
