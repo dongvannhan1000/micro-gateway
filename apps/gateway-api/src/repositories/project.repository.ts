@@ -55,6 +55,17 @@ export class ProjectRepository {
     pii_scrubbing_level?: 'low' | 'medium' | 'high';
     pii_scrubbing_enabled?: number;
   }): Promise<number> {
+    // Convert undefined to null for D1 compatibility
+    const params = [
+      data.name ?? null,
+      data.description ?? null,
+      data.model_aliases ?? null,
+      data.pii_scrubbing_level ?? null,
+      data.pii_scrubbing_enabled ?? null,
+      id,
+      userId
+    ];
+
     const { changes } = await this.db.run(
       `UPDATE projects
        SET name = COALESCE(?, name),
@@ -64,7 +75,7 @@ export class ProjectRepository {
            pii_scrubbing_enabled = COALESCE(?, pii_scrubbing_enabled),
            updated_at = CURRENT_TIMESTAMP
        WHERE id = ? AND user_id = ?`,
-      [data.name, data.description, data.model_aliases, data.pii_scrubbing_level, data.pii_scrubbing_enabled, id, userId]
+      params
     );
     return changes;
   }
