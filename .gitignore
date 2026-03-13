@@ -32,6 +32,8 @@ yarn-error.log*
 docs
 project-status
 research
+security-assessment
+legal
 TESTING.md
 .claude/settings.local.json
 

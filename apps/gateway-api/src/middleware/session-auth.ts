@@ -32,7 +32,15 @@ export async function sessionAuth(c: Context<{ Bindings: Env; Variables: Variabl
         if (header.alg === 'HS256') {
             console.log(`[GatewayService] Action: verifying_hs256`);
             const secret = new TextEncoder().encode(c.env.SUPABASE_JWT_SECRET);
-            const result = await jwtVerify(token, secret);
+
+            // SECURITY FIX: Validate JWT expiration, issuer, and audience
+            const supabaseUrl = c.env.SUPABASE_URL?.replace(/\/$/, '');
+            const result = await jwtVerify(token, secret, {
+                maxTokenAge: '1h', // Reject tokens older than 1 hour
+                issuer: `${supabaseUrl}/auth/v1`, // Validate issuer
+                audience: 'authenticated' // Validate audience
+            });
+
             payload = result.payload;
         } else if (header.alg === 'RS256' || header.alg === 'ES256') {
             console.log(`[GatewayService] Action: verifying_asymmetric (Metadata: alg=${header.alg})`);
@@ -44,7 +52,15 @@ export async function sessionAuth(c: Context<{ Bindings: Env; Variables: Variabl
                 console.log(`[GatewayService] Action: fetching_jwks (Metadata: url=${jwksUrl})`);
                 jwks = createRemoteJWKSet(new URL(jwksUrl));
             }
-            const result = await jwtVerify(token, jwks);
+
+            // SECURITY FIX: Validate JWT expiration, issuer, and audience
+            const supabaseUrl = c.env.SUPABASE_URL?.replace(/\/$/, '');
+            const result = await jwtVerify(token, jwks, {
+                maxTokenAge: '1h', // Reject tokens older than 1 hour
+                issuer: `${supabaseUrl}/auth/v1`, // Validate issuer
+                audience: 'authenticated' // Validate audience
+            });
+
             payload = result.payload;
         } else {
             throw new Error(`Unsupported algorithm: ${header.alg}`);

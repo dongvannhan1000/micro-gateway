@@ -1,12 +1,17 @@
 import { Hono } from 'hono';
 import { Env, Variables } from '../types';
 import { sessionAuth } from '../middleware/session-auth';
+import { ipRateLimiter } from '../middleware/ip-rate-limiter';
 import { generateGatewayKey, hashGatewayKey } from '../utils/crypto';
 import { syncPricingFromLiteLLM } from './sync-pricing';
 import { alertRouter } from './alerts';
 import { analyticsRouter } from './analytics';
 
 const management = new Hono<{ Bindings: Env; Variables: Variables }>();
+
+// SECURITY FIX: Apply IP-based rate limiting to prevent brute force attacks on authentication
+// Limits: 10 requests per minute per IP address
+management.use('*', ipRateLimiter);
 
 // All management routes require Supabase session authentication
 management.use('*', sessionAuth);

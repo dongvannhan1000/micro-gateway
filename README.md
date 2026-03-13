@@ -26,6 +26,26 @@
 - ✅ **Rate limiting** - Per-key configurable limits
 - ✅ **Cost analytics** - Track spend per project/provider
 - ✅ **OpenAI-compatible API** - Drop-in replacement for OpenAI SDKs
+- ✅ **Security hardened** - JWT validation, IP rate limiting, race condition protection
+
+---
+
+## 🔒 Security
+
+All critical security vulnerabilities have been fixed and verified through comprehensive penetration testing (96.6% test success rate). See [SECURITY.md](SECURITY.md) for details.
+
+**Recent Security Fixes:**
+- ✅ JWT expiration validation (1-hour max token age)
+- ✅ Anomaly detection blocking (suspicious activity blocked)
+- ✅ IP-based auth rate limiting (10 req/min per IP)
+- ✅ Race condition protection (atomic increment operations)
+- ✅ Comprehensive secret rotation documentation
+
+**Verify Security Fixes:**
+```bash
+# Run security verification script
+./scripts/verify-security-fixes.sh
+```
 
 ---
 

@@ -6,6 +6,7 @@ import { RequestLogRepository } from './request-log.repository';
 import { AlertRepository } from './alert.repository';
 import { PricingRepository } from './pricing.repository';
 import { WaitlistRepository } from './waitlist.repository';
+import { SecurityViolationRepository } from './security-violation.repository';
 
 export { D1Adapter } from './d1-adapter';
 
@@ -17,6 +18,7 @@ export interface Repositories {
   alert: AlertRepository;
   pricing: PricingRepository;
   waitlist: WaitlistRepository;
+  securityViolation: SecurityViolationRepository;
 }
 
 /**
@@ -32,6 +34,7 @@ export function createRepositories(db: DatabaseAdapter): Repositories {
     alert: new AlertRepository(db),
     pricing: new PricingRepository(db),
     waitlist: new WaitlistRepository(db),
+    securityViolation: new SecurityViolationRepository(db),
   };
 }
 
@@ -43,3 +46,4 @@ export { RequestLogRepository } from './request-log.repository';
 export { AlertRepository } from './alert.repository';
 export { PricingRepository } from './pricing.repository';
 export { WaitlistRepository } from './waitlist.repository';
+export { SecurityViolationRepository } from './security-violation.repository';
