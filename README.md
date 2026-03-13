@@ -1,185 +1,89 @@
 # Micro-Security Gateway
 
-[![Deploy Gateway](https://github.com/dongvannhan1000/micro-gateway/actions/workflows/deploy-gateway.yml/badge.svg)](https://github.com/dongvannhan1000/micro-gateway/actions/workflows/deploy-gateway.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Security: AES-256](https://img.shields.io/badge/Security-AES--256-green)](./SECURITY.md)
 
-Hybrid Cloudflare-based API gateway providing secure access to AI providers (OpenAI, Anthropic, Google) with built-in rate limiting, anomaly detection, and cost tracking.
+**Self-hosted, open-source AI API gateway with enterprise security.** Your provider keys never leave your infrastructure.
 
-## Overview
+---
 
-Micro-Security Gateway acts as a secure proxy between your applications and AI providers, offering:
+## Why Micro-Security Gateway?
 
-- OpenAI-compatible API interface
-- Multi-provider routing (OpenAI, Anthropic, Google, DeepSeek)
-- Built-in rate limiting and cost tracking
-- Anomaly detection for prompt injection attacks
-- Content filtering and security monitoring
-- Real-time analytics dashboard
+**Your Keys, Your Infrastructure** - Deploy on your own servers. Your OpenAI/Anthropic/Google API keys never leave your infrastructure.
 
-## Architecture
+**Enterprise Security** - Anomaly detection, PII scrubbing, hard spending caps. Features competitors charge $100+/month for.
 
-**Pattern**: Hybrid Cloudflare strategy
-- **Gateway**: Hono.js on Cloudflare Workers (edge compute)
-- **Dashboard**: Next.js 16 on Vercel (SSR/CSR)
-- **Database**: Cloudflare D1 (SQLite at edge)
-- **Caching**: Cloudflare KV (rate limiting)
+**Free & Open Source** - MIT license. Deploy anywhere. No vendor lock-in.
 
-## Live URLs
-
-- **Gateway API**: https://gateway-api.nhandong0205.workers.dev ✅
-- **Dashboard UI**: (Deployed to Vercel - URL to be confirmed) ✅
-
-**Status**: ✅ **PRODUCTION READY** - Security Score: 95/100
-
-## Quick Start
-
-### Prerequisites
-
-- Node.js 20+
-- Cloudflare account with Workers enabled
-- Supabase account (for authentication)
-
-### Installation
-
-```bash
-# Clone repository
-git clone https://github.com/dongvannhan1000/micro-gateway.git
-cd micro-gateway
-
-# Install dependencies
-npm install
-```
-
-### Local Development
-
-```bash
-# Start gateway in dev mode
-npm run dev:gateway
-
-# Start dashboard in dev mode
-npm run dev:dashboard
-```
-
-### Environment Variables
-
-Create `.dev.vars` in project root:
-
-```bash
-SUPABASE_URL=your_supabase_url
-SUPABASE_JWT_SECRET=your_jwt_secret
-ENCRYPTION_SECRET=your_encryption_secret
-RESEND_API_KEY=your_resend_api_key
-```
-
-## Deployment
-
-### Automated Deployment (Recommended)
-
-The project uses GitHub Actions for CI/CD:
-
-1. **Configure Secrets**:
-   - `CLOUDFLARE_API_TOKEN` - Cloudflare API token with Workers edit permission
-   - `CLOUDFLARE_ACCOUNT_ID` - Your Cloudflare account ID
-
-2. **Push to Main**:
-   ```bash
-   git add .
-   git commit -m "feat: your changes"
-   git push origin main
-   ```
-
-3. **Auto-Deploy**: GitHub Actions automatically builds and deploys
-
-**See**: [CICD_QUICK_START.md](./CICD_QUICK_START.md) for detailed setup
-
-### Manual Deployment
-
-```bash
-# Deploy gateway
-npm run deploy:gateway
-
-# Deploy dashboard
-npm run deploy:dashboard
-```
-
-## Documentation
-
-### CI/CD & Deployment
-- [CICD_QUICK_START.md](./CICD_QUICK_START.md) - Setup GitHub Actions (10 min)
-- [DEPLOYMENT_CI_CD.md](./DEPLOYMENT_CI_CD.md) - Complete CI/CD documentation
-- [CICD_MONITORING.md](./CICD_MONITORING.md) - Monitoring and troubleshooting
-
-### Testing & Reports
-- [TESTING_GUIDE.md](./TESTING_GUIDE.md) - API testing guide
-- [API_TEST_REPORT.md](./API_TEST_REPORT.md) - Test results
-- [TESTING_SUMMARY.md](./TESTING_SUMMARY.md) - Testing summary
-
-### Deployment
-- [DEPLOYMENT_REPORT.md](./DEPLOYMENT_REPORT.md) - Gateway deployment report
-- [DASHBOARD_DEPLOYMENT_FIX.md](./DASHBOARD_DEPLOYMENT_FIX.md) - Dashboard deployment fix
-
-## Project Structure
-
-```
-micro-gateway/
-├── apps/
-│   ├── gateway-api/         # Cloudflare Worker (Hono.js)
-│   │   ├── src/
-│   │   │   ├── middleware/  # Auth, rate limiting, anomaly detection
-│   │   │   ├── gateway/     # OpenAI-compatible proxy endpoints
-│   │   │   ├── management/  # Internal API for dashboard
-│   │   │   └── auth/        # Authentication endpoints
-│   │   └── wrangler.toml    # Cloudflare Worker configuration
-│   └── dashboard-ui/        # Next.js 15 dashboard
-│       ├── src/
-│       │   ├── app/        # Next.js App Router pages
-│       │   ├── components/  # UI components (glassmorphism)
-│       │   ├── lib/         # Utilities and API clients
-│       │   └── hooks/       # Custom React hooks
-│       └── open-next.config.ts # OpenNext.js Cloudflare config
-├── packages/
-│   ├── db/                  # Shared database layer
-│   │   ├── src/
-│   │   │   ├── types.ts     # TypeScript interfaces
-│   │   │   ├── pricing.ts   # Cost calculation logic
-│   │   │   └── db-adapter.ts # Database abstraction layer
-│   │   └── migrations/      # Database schema migrations
-│   └── shared/              # Shared utilities and types
-└── .github/
-    └── workflows/           # GitHub Actions CI/CD
-        ├── deploy-dashboard.yml
-        ├── deploy-gateway.yml
-        └── database-migration.yml
-```
+---
 
 ## Features
 
-### Gateway API
-- OpenAI-compatible proxy interface
-- Multi-provider support (OpenAI, Anthropic, Google, DeepSeek)
-- API key authentication with SHA-256 hashing
-- Rate limiting with Cloudflare KV
-- Anomaly detection for prompt injection
-- Content filtering for sensitive data
-- Cost tracking and budgeting
-- Security event logging
+- ✅ **Multi-provider routing** - OpenAI, Anthropic, Google, DeepSeek, Groq, Together AI
+- ✅ **Anomaly detection** - Block prompt injection attacks (OWASP #1 LLM risk)
+- ✅ **PII scrubbing** - GDPR/HIPAA compliant data redaction
+- ✅ **Hard spending caps** - Never get bill shock again
+- ✅ **Rate limiting** - Per-key configurable limits
+- ✅ **Cost analytics** - Track spend per project/provider
+- ✅ **OpenAI-compatible API** - Drop-in replacement for OpenAI SDKs
 
-### Dashboard UI
-- Real-time metrics and analytics
-- API key management
-- Security event monitoring
-- Alert configuration
-- Cost tracking and reporting
-- Responsive glassmorphism design
-- Dark theme optimized for developer tools
+---
+
+## Quick Start
+
+### Self-Hosted Deployment (5 minutes)
+
+```bash
+# 1. Clone and install
+git clone https://github.com/dongvannhan1000/micro-gateway.git
+cd micro-gateway
+npm install
+
+# 2. Configure Supabase (free tier)
+#    Go to https://supabase.com → New Project
+#    Copy Project URL + JWT Secret
+
+# 3. Deploy gateway
+cd apps/gateway-api
+npx wrangler d1 create ms-gateway-db  # Copy database_id
+npx wrangler kv:namespace create "RATE_LIMIT_KV"  # Copy namespace id
+# Update wrangler.toml with both IDs
+
+npx wrangler secret put SUPABASE_JWT_SECRET
+npx wrangler secret put ENCRYPTION_SECRET  # Generate: openssl rand -base64 32
+npx wrangler deploy
+
+# 4. Add provider keys via dashboard UI
+#    Access dashboard, create project, add keys in Settings
+```
+
+**[🚀 Full Deployment Guide](./SELF_HOSTED.md)** - Detailed setup with troubleshooting
+
+---
+
+## Architecture
+
+```
+Cloudflare Workers (Edge)
+├── Gateway API (Hono.js)
+│   ├── Multi-provider routing
+│   ├── Rate limiting (KV)
+│   ├── Anomaly detection
+│   └── PII scrubbing
+└── D1 Database (SQLite)
+    ├── Projects & API keys
+    ├── Provider configs (encrypted)
+    └── Usage tracking
+```
+
+---
 
 ## API Usage
 
-### Proxy Example
-
 ```bash
 # Use OpenAI-compatible endpoint
-curl https://gateway-api.nhandong0205.workers.dev/v1/chat/completions \
-  -H "Authorization: Bearer YOUR_GATEWAY_API_KEY" \
+curl https://your-gateway.workers.dev/v1/chat/completions \
+  -H "Authorization: Bearer YOUR_GATEWAY_KEY" \
   -H "Content-Type: application/json" \
   -d '{
     "model": "gpt-4",
@@ -187,77 +91,102 @@ curl https://gateway-api.nhandong0205.workers.dev/v1/chat/completions \
   }'
 ```
 
-### Provider Selection
-
-```bash
-# OpenAI
-{"model": "gpt-4", ...}
-
-# Anthropic
-{"model": "claude-3-opus-20240229", ...}
-
-# Google
-{"model": "gemini-pro", ...}
-
-# DeepSeek
-{"model": "deepseek-chat", ...}
+**Provider Selection**:
+```json
+{"model": "gpt-4"}           // OpenAI
+{"model": "claude-3-opus"}    // Anthropic
+{"model": "gemini-pro"}       // Google
+{"model": "deepseek-chat"}    // DeepSeek
 ```
-
-## Database Migrations
-
-```bash
-# Local development
-cd packages/db && npm run migrate:local
-
-# Production
-cd packages/db && npm run migrate:remote
-```
-
-## Monitoring
-
-### GitHub Actions
-https://github.com/dongvannhan1000/micro-gateway/actions
-
-### Cloudflare Dashboard
-https://dash.cloudflare.com
-
-## Contributing
-
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Run tests: `npm run test`
-5. Commit and push
-6. Open a pull request
-
-## Security
-
-- API keys are hashed using SHA-256
-- Keys encrypted at rest
-- Rate limiting prevents abuse
-- Anomaly detection detects attacks
-- Security event logging
-
-## License
-
-MIT
-
-## Support
-
-- **Issues**: https://github.com/dongvannhan1000/micro-gateway/issues
-- **Documentation**: See `/docs` folder
-- **Cloudflare Workers**: https://developers.cloudflare.com/workers/
-
-## Status
-
-- Gateway API: Deployed
-- Dashboard UI: Deployed (via CI/CD)
-- CI/CD Pipeline: Active
-- Documentation: Complete
 
 ---
 
-**Built with**: Hono.js, Next.js 15, Cloudflare Workers, Cloudflare D1, Cloudflare KV
+## Security
 
-**DevOps Automator**: Claude (DevOps Automator Agent)
-**Last Updated**: March 12, 2026
+- **AES-256-GCM encryption** for provider keys at rest
+- **SHA-256 hashing** for gateway key authentication
+- **TLS 1.3** for all connections
+- **Per-user encryption keys** (isolation)
+- **Security audit logging** (all key access)
+
+**[📖 Security Documentation](./SECURITY.md)** - Encryption architecture, compliance, best practices
+
+**Vulnerability Reporting**: nhandong0205@gmail.com
+
+---
+
+## Configuration Examples
+
+### Rate Limiting
+```json
+{
+  "rate_limit": {
+    "requests_per_minute": 100
+  }
+}
+```
+
+### Monthly Budget Cap
+```json
+{
+  "monthly_limit_usd": 100
+}
+```
+
+### PII Scrubbing
+```json
+{
+  "pii_scrubbing_level": "high"  // low | medium | high
+}
+```
+
+---
+
+## Documentation
+
+- [**SELF_HOSTED.md**](./SELF_HOSTED.md) - Deployment guide
+- [**SECURITY.md**](./SECURITY.md) - Security architecture
+- [**CONTRIBUTING.md**](./CONTRIBUTING.md) - Contribution guidelines
+- [**LICENSE**](./LICENSE) - MIT License
+
+---
+
+## Contributing
+
+We welcome contributions!
+
+1. Fork the repository
+2. Create feature branch (`git checkout -b feature/amazing-feature`)
+3. Make changes with clear commits
+4. Run tests: `npm run test`
+5. Open pull request
+
+**Areas We Welcome**:
+- New AI provider integrations
+- Security improvements
+- Documentation enhancements
+- Bug fixes
+
+See [CONTRIBUTING.md](./CONTRIBUTING.md) for guidelines.
+
+---
+
+## License
+
+[MIT License](./LICENSE) - Copyright (c) 2026
+
+**Free for personal and commercial use.**
+
+---
+
+## Support
+
+- **Issues**: [GitHub Issues](https://github.com/dongvannhan1000/micro-gateway/issues)
+- **Security**: nhandong0205@gmail.com
+- **Documentation**: [See above](#documentation)
+
+---
+
+**Built with**: Hono.js, Next.js, Cloudflare Workers, D1, KV
+
+**Repository**: https://github.com/dongvannhan1000/micro-gateway

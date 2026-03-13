@@ -45,6 +45,10 @@ reports/
 *.md
 !README.md
 !CLAUDE.md
+!LICENSE
+!CONTRIBUTING.md
+!SECURITY.md
+!SELF_HOSTED.md
 
 # Backup Files
 *.nocron

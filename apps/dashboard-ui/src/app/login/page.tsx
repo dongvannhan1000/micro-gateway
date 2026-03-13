@@ -36,6 +36,22 @@ export default function LoginPage() {
                     <p className="text-muted text-sm">Sign in to manage your AI security and costs</p>
                 </div>
 
+                {/* Self-hosted trust messaging */}
+                <div className="glass-card p-4 mb-6 text-center space-y-2">
+                    <div className="flex items-center justify-center gap-2 text-sm text-muted">
+                        <Shield className="w-4 h-4 text-green-500" />
+                        <span>Self-hosted option available - Your keys stay on your infrastructure</span>
+                    </div>
+                    <a
+                        href="https://github.com/yourorg/micro-gateway/blob/main/SELF_HOSTED.md"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-sm text-accent-blue hover:underline"
+                    >
+                        Learn about self-hosting →
+                    </a>
+                </div>
+
                 <div className="glass-card">
                     <form action={handleSubmit} className="space-y-4">
                         <div className="space-y-2">
