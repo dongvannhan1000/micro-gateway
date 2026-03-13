@@ -40,8 +40,19 @@ export async function gatewayKeyAuth(c: Context<{ Bindings: Env; Variables: Vari
             }, 401);
         }
 
-        // Enforcement: Check if monthly limit is exceeded
-        if (row.monthly_limit_usd > 0 && row.current_month_usage_usd >= row.monthly_limit_usd) {
+        // Security: Check if key has been revoked
+        if (row.revoked_at || row.status === 'revoked') {
+            return c.json({
+                error: {
+                    message: 'Invalid or revoked API Key',
+                    type: 'invalid_request_error',
+                    code: 'invalid_api_key'
+                }
+            }, 401);
+        }
+
+        // Enforcement: Check if monthly limit is exceeded (allow when usage exactly equals limit)
+        if (row.monthly_limit_usd > 0 && row.current_month_usage_usd > row.monthly_limit_usd) {
             return c.json({
                 error: {
                     message: 'Monthly usage limit exceeded',

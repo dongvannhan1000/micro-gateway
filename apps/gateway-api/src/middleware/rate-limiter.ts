@@ -43,7 +43,7 @@ export async function rateLimiter(c: Context<{ Bindings: Env; Variables: Variabl
             }, 429, {
                 'X-RateLimit-Limit-Day': dayLimit.toString(),
                 'X-RateLimit-Remaining-Day': '0',
-                'Retry-After': (86400 - (now.getHours() * 3600 + now.getMinutes() * 60 + now.getSeconds())).toString()
+                'Retry-After': (86400 - (now.getUTCHours() * 3600 + now.getUTCMinutes() * 60 + now.getUTCSeconds())).toString()
             });
         }
 
