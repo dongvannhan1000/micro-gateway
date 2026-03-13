@@ -64,14 +64,19 @@ describe('PENETRATION TEST: JWT Exploitation Attempts', () => {
     describe('Attack Vector 1: Expired JWT Tokens', () => {
         it('should reject tokens expired > 1 hour ago', async () => {
             // Create token that expired 2 hours ago
+            const now = Date.now();
+            const issuedAt = new Date(now - 7200000); // 2 hours ago
+            const expirationTime = new Date(now - 3600000); // 1 hour ago (expired)
+
             const expiredToken = await new SignJWT({
                 sub: 'user-123',
                 email: 'test@example.com',
-                aud: 'authenticated'
+                aud: 'authenticated',
+                iat: Math.floor(issuedAt.getTime() / 1000) // Explicit iat as UNIX timestamp
             })
                 .setProtectedHeader({ alg: 'HS256' })
-                .setIssuedAt(Date.now() - 7200000) // 2 hours ago
-                .setExpirationTime('1h') // Expired 1 hour after issuance
+                .setIssuedAt(issuedAt)
+                .setExpirationTime(expirationTime)
                 .setIssuer(`${mockEnv.SUPABASE_URL}/auth/v1`)
                 .sign(new TextEncoder().encode(mockEnv.SUPABASE_JWT_SECRET!));
 
@@ -96,7 +101,7 @@ describe('PENETRATION TEST: JWT Exploitation Attempts', () => {
                 aud: 'authenticated'
             })
                 .setProtectedHeader({ alg: 'HS256' })
-                .setIssuedAt(Date.now() - 86400000) // 1 day ago
+                .setIssuedAt(Math.floor((Date.now() - 86400000) / 1000)) // 1 day ago (seconds)
                 .setExpirationTime(Date.now() - 3600000) // Expired 1 hour ago
                 .setIssuer(`${mockEnv.SUPABASE_URL}/auth/v1`)
                 .sign(new TextEncoder().encode(mockEnv.SUPABASE_JWT_SECRET!));
