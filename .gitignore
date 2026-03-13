@@ -56,3 +56,4 @@ reports/
 *.nocron
 *.bak
 *.backup
+scripts/*.sh
