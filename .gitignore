@@ -59,4 +59,5 @@ reports/
 scripts/*.sh
 
 # Local Development Scripts (private utilities)
-local-scripts/
+local-scripts/*
+*.txt

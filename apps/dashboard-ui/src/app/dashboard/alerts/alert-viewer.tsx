@@ -18,9 +18,10 @@ export function AlertViewer({ initialRules, projects, initialProjectId }: AlertV
     const [isAdding, setIsAdding] = useState(false);
     const [newRule, setNewRule] = useState({
         name: '',
-        type: 'total_cost_threshold',
+        type: 'cost_threshold',
         threshold: 0,
-        email: ''
+        action: 'email',
+        target: ''
     });
 
     const loadRules = async (projectId: string) => {
@@ -43,10 +44,35 @@ export function AlertViewer({ initialRules, projects, initialProjectId }: AlertV
 
     const handleCreate = async () => {
         if (!selectedProjectId) return;
+
+        // Validate required fields
+        if (!newRule.type || !newRule.action) {
+            alert('Please select trigger type and action');
+            return;
+        }
+
+        // For cost threshold, require threshold value
+        if (newRule.type === 'cost_threshold' && (!newRule.threshold || newRule.threshold <= 0)) {
+            alert('Please enter a valid threshold amount');
+            return;
+        }
+
+        // For all types, require target (email or webhook URL)
+        if (!newRule.target || newRule.target.trim() === '') {
+            alert(newRule.action === 'email' ? 'Please enter an email address' : 'Please enter a webhook URL');
+            return;
+        }
+
         try {
-            await createAlertRule(selectedProjectId, newRule);
+            const payload = {
+                type: newRule.type,
+                threshold: newRule.threshold,
+                action: newRule.action,
+                target: newRule.target
+            };
+            await createAlertRule(selectedProjectId, payload);
             setIsAdding(false);
-            setNewRule({ name: '', type: 'total_cost_threshold', threshold: 0, email: '' });
+            setNewRule({ name: '', type: 'cost_threshold', threshold: 0, action: 'email', target: '' });
             loadRules(selectedProjectId);
         } catch (err) {
             console.error(err);
@@ -101,48 +127,78 @@ export function AlertViewer({ initialRules, projects, initialProjectId }: AlertV
                     <h3 className="font-bold mb-4 flex items-center gap-2">
                         <AlertCircle className="w-4 h-4 text-accent-violet" /> New Alert Rule
                     </h3>
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 items-end">
-                        <div className="space-y-1.5">
-                            <label className="text-[10px] uppercase font-bold text-muted px-1">Rule Name</label>
-                            <input 
-                                type="text" 
-                                placeholder="Monthly Spending Alert" 
-                                className="bg-glass-bg border border-glass-border rounded-xl px-3 py-2 text-sm w-full outline-none focus:border-accent-violet/50"
-                                value={newRule.name}
-                                onChange={e => setNewRule({...newRule, name: e.target.value})}
-                            />
+                    <div className="space-y-4">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div className="space-y-1.5">
+                                <label className="text-[10px] uppercase font-bold text-muted px-1">Rule Name</label>
+                                <input
+                                    type="text"
+                                    placeholder="Monthly Spending Alert"
+                                    className="bg-glass-bg border border-glass-border rounded-xl px-3 py-2 text-sm w-full outline-none focus:border-accent-violet/50"
+                                    value={newRule.name}
+                                    onChange={e => setNewRule({...newRule, name: e.target.value})}
+                                />
+                            </div>
+                            <div className="space-y-1.5">
+                                <label className="text-[10px] uppercase font-bold text-muted px-1">Trigger Type</label>
+                                <select
+                                    className="bg-glass-bg border border-glass-border rounded-xl px-3 py-2 text-sm w-full outline-none focus:border-accent-violet/50"
+                                    value={newRule.type}
+                                    onChange={e => setNewRule({...newRule, type: e.target.value as any})}
+                                >
+                                    <option value="cost_threshold">Cost Threshold ($)</option>
+                                    <option value="injection_detected">Prompt Injection</option>
+                                </select>
+                            </div>
                         </div>
-                        <div className="space-y-1.5">
-                            <label className="text-[10px] uppercase font-bold text-muted px-1">Trigger Type</label>
-                            <select 
-                                className="bg-glass-bg border border-glass-border rounded-xl px-3 py-2 text-sm w-full outline-none focus:border-accent-violet/50"
-                                value={newRule.type}
-                                onChange={e => setNewRule({...newRule, type: e.target.value as any})}
-                            >
-                                <option value="total_cost_threshold">Cost Threshold ($)</option>
-                                <option value="prompt_injection_detected">Prompt Injection</option>
-                            </select>
+
+                        {newRule.type === 'cost_threshold' && (
+                            <div className="space-y-1.5">
+                                <label className="text-[10px] uppercase font-bold text-muted px-1">Threshold Amount ($)</label>
+                                <input
+                                    type="number"
+                                    placeholder="e.g. 50"
+                                    className="bg-glass-bg border border-glass-border rounded-xl px-3 py-2 text-sm w-full outline-none focus:border-accent-violet/50"
+                                    value={newRule.threshold || ''}
+                                    onChange={e => setNewRule({...newRule, threshold: parseFloat(e.target.value) || 0})}
+                                />
+                            </div>
+                        )}
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div className="space-y-1.5">
+                                <label className="text-[10px] uppercase font-bold text-muted px-1">Action Type</label>
+                                <select
+                                    className="bg-glass-bg border border-glass-border rounded-xl px-3 py-2 text-sm w-full outline-none focus:border-accent-violet/50"
+                                    value={newRule.action}
+                                    onChange={e => setNewRule({...newRule, action: e.target.value as any, target: ''})}
+                                >
+                                    <option value="email">Send Email</option>
+                                    <option value="webhook">Call Webhook</option>
+                                </select>
+                            </div>
+                            <div className="space-y-1.5">
+                                <label className="text-[10px] uppercase font-bold text-muted px-1">
+                                    {newRule.action === 'email' ? 'Email Address' : 'Webhook URL'}
+                                </label>
+                                <input
+                                    type={newRule.action === 'email' ? 'email' : 'url'}
+                                    placeholder={newRule.action === 'email' ? 'admin@example.com' : 'https://hooks.example.com/alert'}
+                                    className="bg-glass-bg border border-glass-border rounded-xl px-3 py-2 text-sm w-full outline-none focus:border-accent-violet/50"
+                                    value={newRule.target}
+                                    onChange={e => setNewRule({...newRule, target: e.target.value})}
+                                />
+                            </div>
                         </div>
-                        <div className="space-y-1.5">
-                            <label className="text-[10px] uppercase font-bold text-muted px-1">Threshold / Email</label>
-                            <input 
-                                type="text" 
-                                placeholder={newRule.type === 'total_cost_threshold' ? "e.g. 50" : "Notification Email"} 
-                                className="bg-glass-bg border border-glass-border rounded-xl px-3 py-2 text-sm w-full outline-none focus:border-accent-violet/50"
-                                onChange={e => {
-                                    if(newRule.type === 'total_cost_threshold') setNewRule({...newRule, threshold: parseFloat(e.target.value) || 0});
-                                    else setNewRule({...newRule, email: e.target.value});
-                                }}
-                            />
-                        </div>
+
                         <div className="flex gap-2">
-                            <button 
+                            <button
                                 onClick={handleCreate}
                                 className="flex-1 bg-accent-violet text-white py-2 rounded-xl font-bold shadow-lg shadow-accent-violet/20 hover:scale-[1.02] transition-all text-sm"
                             >
                                 Save Rule
                             </button>
-                            <button 
+                            <button
                                 onClick={() => setIsAdding(false)}
                                 className="px-4 py-2 border border-glass-border rounded-xl text-muted hover:text-white transition-all text-sm"
                             >
@@ -159,11 +215,11 @@ export function AlertViewer({ initialRules, projects, initialProjectId }: AlertV
                         <div className="flex justify-between items-start mb-4">
                             <div className={clsx(
                                 "p-3 rounded-xl border shadow-lg",
-                                rule.type === 'total_cost_threshold' ? "bg-green-500/10 border-green-500/20 text-green-500" : "bg-red-500/10 border-red-500/20 text-red-500"
+                                rule.type === 'cost_threshold' ? "bg-green-500/10 border-green-500/20 text-green-500" : "bg-red-500/10 border-red-500/20 text-red-500"
                             )}>
-                                {rule.type === 'total_cost_threshold' ? <DollarSign className="w-5 h-5" /> : <ShieldAlert className="w-5 h-5" />}
+                                {rule.type === 'cost_threshold' ? <DollarSign className="w-5 h-5" /> : <ShieldAlert className="w-5 h-5" />}
                             </div>
-                            <button 
+                            <button
                                 onClick={() => handleDelete(rule.id)}
                                 className="text-muted hover:text-red-500 p-2 transition-colors opacity-0 group-hover:opacity-100"
                             >
@@ -172,7 +228,7 @@ export function AlertViewer({ initialRules, projects, initialProjectId }: AlertV
                         </div>
                         <h3 className="font-bold text-lg">{rule.name}</h3>
                         <p className="text-xs text-muted mt-2">
-                            {rule.type === 'total_cost_threshold' 
+                            {rule.type === 'cost_threshold'
                                 ? `Triggers when project cost exceeds $${rule.threshold}`
                                 : `Triggers when prompt injection is detected`
                             }

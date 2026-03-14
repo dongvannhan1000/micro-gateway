@@ -53,8 +53,8 @@ export class SecurityViolationRepository {
             LIMIT ?
         `;
 
-        const rows = await this.db.query(stmt, [projectId, limit]);
-        return rows as SecurityViolation[];
+        const result = await this.db.execute(stmt, [projectId, limit]);
+        return (result.results || []) as unknown as SecurityViolation[];
     }
 
     /**
@@ -74,8 +74,8 @@ export class SecurityViolationRepository {
             LIMIT ?
         `;
 
-        const rows = await this.db.query(stmt, [projectId, violationType, limit]);
-        return rows as SecurityViolation[];
+        const result = await this.db.execute(stmt, [projectId, violationType, limit]);
+        return (result.results || []) as unknown as SecurityViolation[];
     }
 
     /**
@@ -95,8 +95,8 @@ export class SecurityViolationRepository {
             LIMIT ?
         `;
 
-        const rows = await this.db.query(stmt, [projectId, severity, limit]);
-        return rows as SecurityViolation[];
+        const result = await this.db.execute(stmt, [projectId, severity, limit]);
+        return (result.results || []) as unknown as SecurityViolation[];
     }
 
     /**
@@ -110,8 +110,8 @@ export class SecurityViolationRepository {
     }> {
         // Total violations
         const totalStmt = `SELECT COUNT(*) as count FROM security_violations WHERE project_id = ?`;
-        const totalResult = await this.db.query(totalStmt, [projectId]);
-        const total = (totalResult[0] as any).count;
+        const totalResult = await this.db.execute(totalStmt, [projectId]);
+        const total = (totalResult.results?.[0] as any)?.count || 0;
 
         // By type
         const typeStmt = `
@@ -120,9 +120,9 @@ export class SecurityViolationRepository {
             WHERE project_id = ?
             GROUP BY violation_type
         `;
-        const typeResults = await this.db.query(typeStmt, [projectId]);
+        const typeResults = await this.db.execute(typeStmt, [projectId]);
         const byType: Record<string, number> = {};
-        for (const row of typeResults) {
+        for (const row of (typeResults.results || [])) {
             byType[(row as any).violation_type] = (row as any).count;
         }
 
@@ -133,9 +133,9 @@ export class SecurityViolationRepository {
             WHERE project_id = ?
             GROUP BY severity
         `;
-        const severityResults = await this.db.query(severityStmt, [projectId]);
+        const severityResults = await this.db.execute(severityStmt, [projectId]);
         const bySeverity: Record<string, number> = {};
-        for (const row of severityResults) {
+        for (const row of (severityResults.results || [])) {
             bySeverity[(row as any).severity] = (row as any).count;
         }
 
@@ -146,8 +146,8 @@ export class SecurityViolationRepository {
             WHERE project_id = ?
             AND created_at >= datetime('now', '-24 hours')
         `;
-        const recentResult = await this.db.query(recentStmt, [projectId]);
-        const recentCount = (recentResult[0] as any).count;
+        const recentResult = await this.db.execute(recentStmt, [projectId]);
+        const recentCount = (recentResult.results?.[0] as any)?.count || 0;
 
         return {
             total,
