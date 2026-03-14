@@ -14,11 +14,13 @@ vi.mock('../utils/errors', () => ({
     })
 }));
 
+import * as anomalyDetector from '../services/anomaly-detector';
+
 describe('anomalyHandler - Security Fixes', () => {
     let mockEnv: Env;
     let mockContext: any;
     let mockRepos: any;
-    let { detectAnomaly } = require('../services/anomaly-detector');
+    let detectAnomaly: any;
 
     beforeEach(() => {
         mockEnv = {
@@ -27,6 +29,9 @@ describe('anomalyHandler - Security Fixes', () => {
                 put: vi.fn()
             }
         } as unknown as Env;
+
+        // Get the mocked function
+        detectAnomaly = anomalyDetector.detectAnomaly;
 
         mockRepos = {
             securityViolation: {
@@ -69,7 +74,7 @@ describe('anomalyHandler - Security Fixes', () => {
                 reason: 'Sudden spike detected: 100 req/min vs 5-min avg of 10.0'
             });
 
-            const nextMock = async () => {};
+            const nextMock = vi.fn();
             await anomalyHandler(mockContext, nextMock);
 
             // Should NOT call next() (blocking behavior)
@@ -90,8 +95,8 @@ describe('anomalyHandler - Security Fixes', () => {
             // Should log security violation to database
             expect(mockRepos.securityViolation.create).toHaveBeenCalledWith(
                 expect.objectContaining({
-                    project_id: 'project-123',
-                    violation_type: 'anomaly',
+                    projectId: 'project-123',
+                    violationType: 'anomaly',
                     severity: 'high'
                 })
             );
@@ -103,7 +108,7 @@ describe('anomalyHandler - Security Fixes', () => {
                 isAnomaly: false
             });
 
-            const nextMock = async () => {};
+            const nextMock = vi.fn();
             await anomalyHandler(mockContext, nextMock);
 
             // SHOULD call next() (allow through)
@@ -122,7 +127,7 @@ describe('anomalyHandler - Security Fixes', () => {
                 reason: 'Prompt injection pattern detected'
             });
 
-            const nextMock = async () => {};
+            const nextMock = vi.fn();
             await anomalyHandler(mockContext, nextMock);
 
             // Should log with metadata
@@ -144,7 +149,7 @@ describe('anomalyHandler - Security Fixes', () => {
                 reason: 'Suspicious pattern'
             });
 
-            const nextMock = async () => {};
+            const nextMock = vi.fn();
             await anomalyHandler(mockContext, nextMock);
 
             // Should still block request even if logging fails
@@ -160,7 +165,7 @@ describe('anomalyHandler - Security Fixes', () => {
                 new Error('Anomaly detector service unavailable')
             );
 
-            const nextMock = async () => {};
+            const nextMock = vi.fn();
             await anomalyHandler(mockContext, nextMock);
 
             // Should NOT call next() (fail closed)
@@ -185,7 +190,7 @@ describe('anomalyHandler - Security Fixes', () => {
                 reason: 'Internal detection algorithm details: threshold=5.0, score=9.5'
             });
 
-            const nextMock = async () => {};
+            const nextMock = vi.fn();
             await anomalyHandler(mockContext, nextMock);
 
             // Error message should be generic (not leak details)
@@ -206,7 +211,7 @@ describe('anomalyHandler - Security Fixes', () => {
                 return null;
             };
 
-            const nextMock = async () => {};
+            const nextMock = vi.fn();
             await anomalyHandler(mockContext, nextMock);
 
             // Should call next() (skip anomaly detection)
@@ -219,7 +224,7 @@ describe('anomalyHandler - Security Fixes', () => {
                 reason: undefined // No reason provided
             });
 
-            const nextMock = async () => {};
+            const nextMock = vi.fn();
             await anomalyHandler(mockContext, nextMock);
 
             // Should still block and log
@@ -233,7 +238,7 @@ describe('anomalyHandler - Security Fixes', () => {
                 new Promise((resolve) => setTimeout(resolve, 10000))
             );
 
-            const nextMock = async () => {};
+            const nextMock = vi.fn();
 
             // Should timeout and handle gracefully
             // (implementation may vary - this documents expected behavior)
@@ -247,13 +252,13 @@ describe('anomalyHandler - Security Fixes', () => {
                 reason: 'Attack detected'
             });
 
-            const nextMock = async () => {};
+            const nextMock = vi.fn();
             await anomalyHandler(mockContext, nextMock);
 
             expect(mockRepos.securityViolation.create).toHaveBeenCalledWith(
                 expect.objectContaining({
                     severity: 'high',
-                    violation_type: 'anomaly'
+                    violationType: 'anomaly'
                 })
             );
         });
@@ -264,12 +269,12 @@ describe('anomalyHandler - Security Fixes', () => {
                 reason: 'Attack detected'
             });
 
-            const nextMock = async () => {};
+            const nextMock = vi.fn();
             await anomalyHandler(mockContext, nextMock);
 
             expect(mockRepos.securityViolation.create).toHaveBeenCalledWith(
                 expect.objectContaining({
-                    project_id: 'project-123'
+                    projectId: 'project-123'
                 })
             );
         });

@@ -11,7 +11,7 @@
 
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { anomalyHandler } from '../src/middleware/anomaly-handler';
-import { detectAnomaly } from '../src/services/anomaly-detector';
+import * as anomalyDetector from '../src/services/anomaly-detector';
 import { Context, Next } from 'hono';
 import { Env, Variables } from '../src/types';
 
@@ -97,7 +97,7 @@ describe('PENETRATION TEST: Anomaly Detection Bypass', () => {
             const next = createMockNext();
 
             // Mock anomaly detection to return true for these payloads
-            vi.spyOn(require('../src/services/anomaly-detector'), 'detectAnomaly').mockResolvedValue({
+            vi.spyOn(anomalyDetector, 'detectAnomaly').mockResolvedValue({
                 isAnomaly: true,
                 reason: 'Prompt injection pattern detected'
             });
@@ -139,7 +139,7 @@ describe('PENETRATION TEST: Anomaly Detection Bypass', () => {
             });
             const next = createMockNext();
 
-            vi.spyOn(require('../src/services/anomaly-detector'), 'detectAnomaly').mockResolvedValue({
+            vi.spyOn(anomalyDetector, 'detectAnomaly').mockResolvedValue({
                 isAnomaly: true,
                 reason: 'SQL injection pattern detected'
             });
@@ -181,7 +181,7 @@ describe('PENETRATION TEST: Anomaly Detection Bypass', () => {
             });
             const next = createMockNext();
 
-            vi.spyOn(require('../src/services/anomaly-detector'), 'detectAnomaly').mockResolvedValue({
+            vi.spyOn(anomalyDetector, 'detectAnomaly').mockResolvedValue({
                 isAnomaly: true,
                 reason: 'XSS pattern detected'
             });
@@ -223,7 +223,7 @@ describe('PENETRATION TEST: Anomaly Detection Bypass', () => {
             });
             const next = createMockNext();
 
-            vi.spyOn(require('../src/services/anomaly-detector'), 'detectAnomaly').mockResolvedValue({
+            vi.spyOn(anomalyDetector, 'detectAnomaly').mockResolvedValue({
                 isAnomaly: true,
                 reason: 'Command injection pattern detected'
             });
@@ -265,7 +265,7 @@ describe('PENETRATION TEST: Anomaly Detection Bypass', () => {
             });
             const next = createMockNext();
 
-            vi.spyOn(require('../src/services/anomaly-detector'), 'detectAnomaly').mockResolvedValue({
+            vi.spyOn(anomalyDetector, 'detectAnomaly').mockResolvedValue({
                 isAnomaly: true,
                 reason: 'Adversarial AI prompt pattern detected'
             });
@@ -305,7 +305,7 @@ describe('PENETRATION TEST: Anomaly Detection Bypass', () => {
             });
             const next = createMockNext();
 
-            vi.spyOn(require('../src/services/anomaly-detector'), 'detectAnomaly').mockResolvedValue({
+            vi.spyOn(anomalyDetector, 'detectAnomaly').mockResolvedValue({
                 isAnomaly: true,
                 reason: 'Path traversal pattern detected'
             });
@@ -344,7 +344,7 @@ describe('PENETRATION TEST: Anomaly Detection Bypass', () => {
             });
             const next = createMockNext();
 
-            const result = await detectAnomaly(context);
+            const result = await anomalyDetector.detectAnomaly(context);
 
             // 100 current vs 5 past average = 20x spike (exceeds 5x threshold)
             expect(result.isAnomaly).toBe(true);
@@ -363,7 +363,7 @@ describe('PENETRATION TEST: Anomaly Detection Bypass', () => {
             });
             const next = createMockNext();
 
-            const result = await detectAnomaly(context);
+            const result = await anomalyDetector.detectAnomaly(context);
 
             // 10 current vs 10 past average = 1x (normal)
             expect(result.isAnomaly).toBe(false);
@@ -372,7 +372,7 @@ describe('PENETRATION TEST: Anomaly Detection Bypass', () => {
 
     describe('Security Violation Logging', () => {
         it('should log blocked attempts to database', async () => {
-            vi.spyOn(require('../src/services/anomaly-detector'), 'detectAnomaly').mockResolvedValue({
+            vi.spyOn(anomalyDetector, 'detectAnomaly').mockResolvedValue({
                 isAnomaly: true,
                 reason: 'Malicious pattern detected'
             });
@@ -396,7 +396,7 @@ describe('PENETRATION TEST: Anomaly Detection Bypass', () => {
         });
 
         it('should include metadata in security violation log', async () => {
-            vi.spyOn(require('../src/services/anomaly-detector'), 'detectAnomaly').mockResolvedValue({
+            vi.spyOn(anomalyDetector, 'detectAnomaly').mockResolvedValue({
                 isAnomaly: true,
                 reason: 'Attack detected'
             });
@@ -431,7 +431,7 @@ describe('PENETRATION TEST: Anomaly Detection Bypass', () => {
         });
 
         it('should fail closed on detection errors', async () => {
-            vi.spyOn(require('../src/services/anomaly-detector'), 'detectAnomaly').mockRejectedValue(
+            vi.spyOn(anomalyDetector, 'detectAnomaly').mockRejectedValue(
                 new Error('Detection service unavailable')
             );
 
@@ -452,7 +452,7 @@ describe('PENETRATION TEST: Anomaly Detection Bypass', () => {
         });
 
         it('should continue logging even if security violation log fails', async () => {
-            vi.spyOn(require('../src/services/anomaly-detector'), 'detectAnomaly').mockResolvedValue({
+            vi.spyOn(anomalyDetector, 'detectAnomaly').mockResolvedValue({
                 isAnomaly: true,
                 reason: 'Attack detected'
             });

@@ -5,13 +5,17 @@ import { Env, Variables } from '../types';
 describe('ipRateLimiter - Security Fixes (CRITICAL FIX #3)', () => {
     let mockEnv: Env;
     let mockContext: any;
+    let mockKV: any;
 
     beforeEach(() => {
+        // Create KV mocks with proper spy tracking
+        mockKV = {
+            get: vi.fn(),
+            put: vi.fn()
+        };
+
         mockEnv = {
-            RATE_LIMIT_KV: {
-                get: vi.fn(),
-                put: vi.fn()
-            }
+            RATE_LIMIT_KV: mockKV
         } as unknown as Env;
 
         mockContext = {
@@ -33,7 +37,7 @@ describe('ipRateLimiter - Security Fixes (CRITICAL FIX #3)', () => {
     describe('Rate Limiting Functionality', () => {
         it('should allow requests under rate limit', async () => {
             // Mock KV: 5 requests so far (under limit of 10)
-            mockEnv.RATE_LIMIT_KV.get.mockResolvedValue('5');
+            mockKV.get.mockResolvedValue('5');
 
             const nextMock = vi.fn().mockResolvedValue(undefined);
             await ipRateLimiter(mockContext, nextMock);
@@ -54,7 +58,7 @@ describe('ipRateLimiter - Security Fixes (CRITICAL FIX #3)', () => {
 
         it('should block requests exceeding rate limit', async () => {
             // Mock KV: 10 requests so far (at limit)
-            mockEnv.RATE_LIMIT_KV.get.mockResolvedValue('10');
+            mockKV.get.mockResolvedValue('10');
 
             const nextMock = vi.fn().mockResolvedValue(undefined);
             await ipRateLimiter(mockContext, nextMock);
@@ -79,7 +83,7 @@ describe('ipRateLimiter - Security Fixes (CRITICAL FIX #3)', () => {
         it('should track different IPs independently', async () => {
             // First IP: 10 requests (at limit)
             mockContext.req.header = (name: string) => '192.168.1.1';
-            mockEnv.RATE_LIMIT_KV.get.mockResolvedValue('10');
+            mockKV.get.mockResolvedValue('10');
 
             const nextMock1 = vi.fn().mockResolvedValue(undefined);
             await ipRateLimiter(mockContext, nextMock1);
@@ -88,7 +92,7 @@ describe('ipRateLimiter - Security Fixes (CRITICAL FIX #3)', () => {
 
             // Second IP: 0 requests (under limit)
             mockContext.req.header = (name: string) => '10.0.0.1';
-            mockEnv.RATE_LIMIT_KV.get.mockResolvedValue('0');
+            mockKV.get.mockResolvedValue('0');
 
             const nextMock2 = vi.fn().mockResolvedValue(undefined);
             await ipRateLimiter(mockContext, nextMock2);
@@ -99,13 +103,13 @@ describe('ipRateLimiter - Security Fixes (CRITICAL FIX #3)', () => {
 
     describe('IP Address Hashing (GDPR Compliance)', () => {
         it('should hash IP addresses before storage', async () => {
-            mockEnv.RATE_LIMIT_KV.get.mockResolvedValue('0');
+            mockKV.get.mockResolvedValue('0');
 
             const nextMock = vi.fn().mockResolvedValue(undefined);
             await ipRateLimiter(mockContext, nextMock);
 
             // Get the key that was used
-            const putCall = mockEnv.RATE_LIMIT_KV.put.mock.calls[0];
+            const putCall = mockKV.put.mock.calls[0];
             const key = putCall[0];
 
             // Key should be a hash (not plaintext IP)
@@ -121,12 +125,12 @@ describe('ipRateLimiter - Security Fixes (CRITICAL FIX #3)', () => {
 
             for (const ip of ['192.168.1.1', '192.168.1.2', '10.0.0.1']) {
                 mockContext.req.header = (name: string) => ip;
-                mockEnv.RATE_LIMIT_KV.get.mockResolvedValue('0');
+                mockKV.get.mockResolvedValue('0');
 
                 const nextMock = vi.fn().mockResolvedValue(undefined);
                 await ipRateLimiter(mockContext, nextMock);
 
-                const putCall = mockEnv.RATE_LIMIT_KV.put.mock.calls[hashes.length];
+                const putCall = mockKV.put.mock.calls[hashes.length];
                 hashes.push(putCall[0]);
             }
 
@@ -140,12 +144,12 @@ describe('ipRateLimiter - Security Fixes (CRITICAL FIX #3)', () => {
 
             for (let i = 0; i < 3; i++) {
                 mockContext.req.header = (name: string) => '192.168.1.1';
-                mockEnv.RATE_LIMIT_KV.get.mockResolvedValue('0');
+                mockKV.get.mockResolvedValue('0');
 
                 const nextMock = vi.fn().mockResolvedValue(undefined);
                 await ipRateLimiter(mockContext, nextMock);
 
-                const putCall = mockEnv.RATE_LIMIT_KV.put.mock.calls[i];
+                const putCall = mockKV.put.mock.calls[i];
                 hashes.push(putCall[0]);
             }
 
@@ -157,12 +161,12 @@ describe('ipRateLimiter - Security Fixes (CRITICAL FIX #3)', () => {
 
     describe('Rate Limit Key Format', () => {
         it('should use minute-based buckets', async () => {
-            mockEnv.RATE_LIMIT_KV.get.mockResolvedValue('0');
+            mockKV.get.mockResolvedValue('0');
 
             const nextMock = vi.fn().mockResolvedValue(undefined);
             await ipRateLimiter(mockContext, nextMock);
 
-            const putCall = mockEnv.RATE_LIMIT_KV.put.mock.calls[0];
+            const putCall = mockKV.put.mock.calls[0];
             const key = putCall[0];
 
             // Key should contain date/time components for minute bucket
@@ -182,7 +186,7 @@ describe('ipRateLimiter - Security Fixes (CRITICAL FIX #3)', () => {
         });
 
         it('should handle KV storage errors gracefully', async () => {
-            mockEnv.RATE_LIMIT_KV.get.mockRejectedValue(
+            mockKV.get.mockRejectedValue(
                 new Error('KV storage unavailable')
             );
 
@@ -194,7 +198,7 @@ describe('ipRateLimiter - Security Fixes (CRITICAL FIX #3)', () => {
         });
 
         it('should handle invalid count values in KV', async () => {
-            mockEnv.RATE_LIMIT_KV.get.mockResolvedValue('not-a-number');
+            mockKV.get.mockResolvedValue('not-a-number');
 
             const nextMock = vi.fn().mockResolvedValue(undefined);
             await ipRateLimiter(mockContext, nextMock);
@@ -206,8 +210,8 @@ describe('ipRateLimiter - Security Fixes (CRITICAL FIX #3)', () => {
 
     describe('Async Counter Increment', () => {
         it('should increment counter asynchronously', async () => {
-            mockEnv.RATE_LIMIT_KV.get.mockResolvedValue('5');
-            mockEnv.RATE_LIMIT_KV.put.mockResolvedValue(undefined); // Return a promise
+            mockKV.get.mockResolvedValue('5');
+            mockKV.put.mockResolvedValue(undefined); // Return a promise
 
             const nextMock = vi.fn().mockResolvedValue(undefined);
             await ipRateLimiter(mockContext, nextMock);
@@ -226,12 +230,12 @@ describe('ipRateLimiter - Security Fixes (CRITICAL FIX #3)', () => {
 
     describe('Rate Limit Reset', () => {
         it('should use appropriate TTL for counter expiration', async () => {
-            mockEnv.RATE_LIMIT_KV.get.mockResolvedValue('0');
+            mockKV.get.mockResolvedValue('0');
 
             const nextMock = vi.fn().mockResolvedValue(undefined);
             await ipRateLimiter(mockContext, nextMock);
 
-            const putCall = mockEnv.RATE_LIMIT_KV.put.mock.calls[0];
+            const putCall = mockKV.put.mock.calls[0];
             const options = putCall[2];
 
             // TTL should be slightly longer than rate limit window

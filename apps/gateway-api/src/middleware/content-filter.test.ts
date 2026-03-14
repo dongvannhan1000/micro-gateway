@@ -132,7 +132,7 @@ describe('Content Filter Middleware', () => {
 
             vi.mocked(scorePrompt).mockReturnValue({
                 score: 95,
-                matches: [{ id: 'ignore-instructions', pattern: /ignore/i, matched: 'Ignore' }],
+                matches: [{ id: 'ignore-instructions', description: 'ignore instructions', severity: 'high' }],
                 isBlocked: true,
                 blockReason: 'High risk: Ignore instructions pattern'
             });
@@ -253,10 +253,11 @@ describe('Content Filter Middleware', () => {
             );
             const mockNext = createMockNext();
             const mockRepos = mockCtx.get('repos');
+            if (!mockRepos) throw new Error('mockRepos is undefined - test setup error');
 
             vi.mocked(scorePrompt).mockReturnValue({
                 score: 95,
-                matches: [{ id: 'test-pattern', pattern: /test/i, matched: 'test' }],
+                matches: [{ id: 'test-pattern', description: 'test pattern', severity: 'high' }],
                 isBlocked: true,
                 blockReason: 'High risk'
             });
@@ -289,7 +290,7 @@ describe('Content Filter Middleware', () => {
 
             vi.mocked(scorePrompt).mockReturnValue({
                 score: 95,
-                matches: [{ id: 'pattern1', pattern: /malicious/i, matched: 'Malicious' }],
+                matches: [{ id: 'pattern1', description: 'malicious pattern', severity: 'high' }],
                 isBlocked: true,
                 blockReason: 'High risk'
             });
@@ -458,12 +459,13 @@ describe('Content Filter Middleware', () => {
             );
             const mockNext = createMockNext();
             const mockRepos = mockCtx.get('repos');
+            if (!mockRepos) throw new Error('mockRepos is undefined - test setup error');
 
             mockRepos.requestLog.create = vi.fn().mockRejectedValue(new Error('DB failed'));
 
             vi.mocked(scorePrompt).mockReturnValue({
                 score: 95,
-                matches: [{ id: 'pattern1', pattern: /test/i, matched: 'test' }],
+                matches: [{ id: 'pattern1', description: 'test pattern', severity: 'high' }],
                 isBlocked: true,
                 blockReason: 'High risk'
             });
@@ -530,7 +532,7 @@ describe('Content Filter Middleware', () => {
 
             vi.mocked(scorePrompt).mockReturnValue({
                 score: 85,
-                matches: [{ id: 'ignore-pattern', pattern: /ignore/i, matched: 'Ignore' }],
+                matches: [{ id: 'ignore-pattern', description: 'ignore pattern', severity: 'high' }],
                 isBlocked: true,
                 blockReason: 'High risk'
             });
@@ -564,7 +566,7 @@ describe('Content Filter Middleware', () => {
 
                 vi.mocked(scorePrompt).mockReturnValue({
                     score: 90,
-                    matches: [{ id: 'attack-pattern', pattern: /ignore/i, matched: 'ignore' }],
+                    matches: [{ id: 'attack-pattern', description: 'attack pattern', severity: 'high' }],
                     isBlocked: true,
                     blockReason: 'Attack pattern detected'
                 });

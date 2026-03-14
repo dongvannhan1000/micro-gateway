@@ -3,7 +3,7 @@ import path from 'path';
 
 export default defineConfig({
     test: {
-        globals: true,
+        globals: false,  // Use explicit imports instead of globals
         environment: 'node',
         exclude: [
             'node_modules',
@@ -11,7 +11,6 @@ export default defineConfig({
             '.git',
             'coverage',
             '**/security/pen-test-*.test.ts',  // Exclude penetration tests from CI/CD
-            '**/src/middleware/anomaly-handler.test.ts',  // Temporarily exclude broken test
         ],
     },
     resolve: {

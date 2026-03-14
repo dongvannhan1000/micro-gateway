@@ -50,7 +50,7 @@ function createMockContext(
             status,
             data,
             headers
-        }))
+        })) as any  // Cast to access .mock property
     } as any;
 }
 
