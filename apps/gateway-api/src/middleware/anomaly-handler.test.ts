@@ -229,7 +229,7 @@ describe('anomalyHandler - Security Fixes', () => {
 
         it('should handle anomaly detection timeout', async () => {
             // Mock timeout
-            detectAnormaly.mockImplementation(() =>
+            detectAnomaly.mockImplementation(() =>
                 new Promise((resolve) => setTimeout(resolve, 10000))
             );
 

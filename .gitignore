@@ -61,3 +61,6 @@ scripts/*.sh
 # Local Development Scripts (private utilities)
 local-scripts/*
 *.txt
+
+# Coverage Reports
+coverage/
