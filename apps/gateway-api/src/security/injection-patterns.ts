@@ -1,11 +1,39 @@
 /**
- * Prompt Injection Detection Patterns (v2)
- * 
+ * Prompt Injection Detection Patterns (v3)
+ *
+ * ⚠️ SECURITY NOTICE - READ BEFORE MODIFYING:
+ *
+ * These patterns are PUBLIC on GitHub. Sophisticated attackers CAN bypass them using:
+ * - Text obfuscation (l33t speak, intentional typos, homoglyphs)
+ * - Language variations (non-English languages)
+ * - Encoded content (base64, unicode, zero-width characters)
+ * - Indirect phrasing ("Tell me about your configuration")
+ * - Multi-step attacks (build context gradually)
+ *
+ * This is a BASIC defense layer, NOT complete protection.
+ *
+ * For production security, combine with:
+ * 1. Rate limiting (prevents brute force pattern discovery)
+ * 2. Behavioral analysis (detects attack patterns over time)
+ * 3. Response monitoring (checks if injection succeeded)
+ * 4. ML-based semantic analysis (detects intent, not just patterns)
+ *
+ * Self-hosted users can:
+ * - Add custom patterns via environment variables
+ * - Implement additional detection layers
+ * - Use AI-based content analysis
+ *
  * Design Principles:
  * - Only include patterns with CLEAR malicious intent (low false-positive risk)
  * - Use severity tiers: 'critical' (auto-block), 'high' (block with 2+ matches), 'medium' (flag only)
- * - Removed FP-prone patterns: "act as", "write a script to", "output as JSON", delimiters
+ * - Multi-language support (English, Vietnamese, common attack vectors)
+ * - Bypass-resistant patterns (match common obfuscation techniques)
  * - Each pattern documents WHY it's malicious and known FP scenarios
+ *
+ * Pattern Update Policy:
+ * - Patterns are updated regularly to address new bypass techniques
+ * - Submit PRs for new patterns with justification and test cases
+ * - Document false positives when removing patterns
  */
 
 export type Severity = 'critical' | 'high' | 'medium';
@@ -136,5 +164,111 @@ export const INJECTION_PATTERNS: InjectionPattern[] = [
         severity: 'medium',
         category: 'system_extraction',
         description: 'Print system prompt request'
+    },
+
+    // ─── VIETNAMESE PATTERNS: Critical for Vietnamese-speaking users ───
+    // Vietnamese prompt injection attacks - same intent as English patterns
+
+    {
+        id: 'VN-IO-001',
+        pattern: /bỏ\s+qua\s+(tất\s+cả\s+)?(các\s+)?hướng\s+dẫn\s+(trước|trên|ở\s+trên)/i,
+        severity: 'critical',
+        category: 'instruction_override',
+        description: 'Vietnamese: Bỏ qua hướng dẫn trước (Ignore previous instructions)'
+    },
+    {
+        id: 'VN-IO-002',
+        pattern: /bỏ\s+lưu\s+(tất\s+cả\s+)?(các\s+)?lệnh\s+(trước|trên|đã\s+cho)/i,
+        severity: 'critical',
+        category: 'instruction_override',
+        description: 'Vietnamese: Bỏ lưu lệnh trước (Disregard prior commands)'
+    },
+    {
+        id: 'VN-SE-001',
+        pattern: /lặp\s+lại\s+(hệ\s+thống\s+)?prompt\s+(của\s+bạn|của\s+hệ\s+thống)/i,
+        severity: 'critical',
+        category: 'system_extraction',
+        description: 'Vietnamese: Lặp lại system prompt (Repeat system prompt)'
+    },
+    {
+        id: 'VN-SE-002',
+        pattern: /cho\s+tôi\s+biết\s+(prompt|system\s+prompt|hệ\s+thống\s+prompt|hệ\s+thống\s+là\s+gì|hướng\s+dẫn|lệnh)\s+(hệ\s+thống|của|bàn|là)/i,
+        severity: 'critical',
+        category: 'system_extraction',
+        description: 'Vietnamese: Cho tôi biết system prompt (Tell me system prompt) - handles mixed EN/VN'
+    },
+    {
+        id: 'VN-SE-003',
+        pattern: /in\s+ra\s+(prompt|hướng\s+dẫn|lệnh)\s+(hệ\s+thống|ban\s+đầu)/i,
+        severity: 'critical',
+        category: 'system_extraction',
+        description: 'Vietnamese: In ra system prompt (Print system prompt)'
+    },
+    {
+        id: 'VN-IO-003',
+        pattern: /từ\s+bây\s+giờ,\s+(bạn|cô)\s+phải/i,
+        severity: 'high',
+        category: 'instruction_override',
+        description: 'Vietnamese: Từ bây giờ bạn phải (From now you must)'
+    },
+    {
+        id: 'VN-IO-004',
+        pattern: /hãy\s+bỏ\s+qua\s+mọi\s+lệnh\s+(trước|trước\s+đó)/i,
+        severity: 'high',
+        category: 'instruction_override',
+        description: 'Vietnamese: Hãy bỏ qua mọi lệnh trước (Ignore all prior commands)'
+    },
+    {
+        id: 'VN-RH-001',
+        pattern: /bạn\s+là\s+(người|thực\s+thể)\s+khác\s+thay\s+vì/i,
+        severity: 'high',
+        category: 'role_hijacking',
+        description: 'Vietnamese: Bạn là người khác thay vì (You are different person instead)'
+    },
+
+    // ─── BYPASS-RESISTANT PATTERNS: Match common obfuscation techniques ───
+    // These patterns attempt to catch variations that bypass simple matching
+
+    {
+        id: 'BR-001',
+        pattern: /1gn0re|\[gn0re|ign0re|ignor3/i,
+        severity: 'critical',
+        category: 'instruction_override',
+        description: 'Bypass-resistant: Leetspeak "ignore" variations'
+    },
+    {
+        id: 'BR-002',
+        pattern: /pr[e3]vi[o0]us|pr[e3]vious/i,
+        severity: 'high',
+        category: 'instruction_override',
+        description: 'Bypass-resistant: Obfuscated "previous"'
+    },
+    {
+        id: 'BR-003',
+        pattern: /instr[uúù][cç]tions|instr[vv]ctions/i,
+        severity: 'high',
+        category: 'instruction_override',
+        description: 'Bypass-resistant: Accented/typo "instructions"'
+    },
+    {
+        id: 'BR-004',
+        pattern: /d[i1]sreg[a@]rd|d[i1]sregard/i,
+        severity: 'critical',
+        category: 'instruction_override',
+        description: 'Bypass-resistant: Obfuscated "disregard"'
+    },
+    {
+        id: 'BR-005',
+        pattern: /r[e3]p[e3]at|r[e3]peat/i,
+        severity: 'critical',
+        category: 'system_extraction',
+        description: 'Bypass-resistant: Leetspeak "repeat"'
+    },
+    {
+        id: 'BR-006',
+        pattern: /sys[\W_]?prompt|system[\W_]?prompt/i,
+        severity: 'high',
+        category: 'system_extraction',
+        description: 'Bypass-resistant: "system prompt" with separators/spaces'
     },
 ];

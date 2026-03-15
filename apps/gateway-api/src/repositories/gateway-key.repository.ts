@@ -18,6 +18,21 @@ export class GatewayKeyRepository {
     return results;
   }
 
+  /**
+   * Count total gateway keys for a user (across all projects).
+   * Used for enforcing free tier limits (max 3 keys).
+   */
+  async countByUser(userId: string): Promise<number> {
+    const { results } = await this.db.execute(
+      `SELECT COUNT(*) as count
+       FROM gateway_keys k
+       JOIN projects p ON k.project_id = p.id
+       WHERE p.user_id = ? AND k.status = 'active'`,
+      [userId]
+    );
+    return results[0]?.count || 0;
+  }
+
   async findByProject(projectId: string, userId: string): Promise<any[]> {
     const { results } = await this.db.execute(
       `SELECT k.id, k.name, k.key_hint, k.status, k.monthly_limit_usd, k.current_month_usage_usd, k.rate_limit_per_min, k.rate_limit_per_day, k.created_at

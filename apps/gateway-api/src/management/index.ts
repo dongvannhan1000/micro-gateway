@@ -57,10 +57,24 @@ management.post('/projects', async (c) => {
     const repos = c.get('repos')!;
     const { name, description } = await c.req.json();
     const id = crypto.randomUUID();
+
     try {
+        // FREE TIER: Max 2 projects per user
+        const existingProjects = await repos.project.countByUser(user.id);
+        if (existingProjects >= 2) {
+            console.warn(`[Management] User ${user.id} exceeded max projects (2)`);
+            return c.json({
+                error: 'Maximum project limit reached',
+                message: 'Free tier allows maximum 2 projects. Please contact support for more.',
+                limit: 2,
+                current: existingProjects
+            }, 400);
+        }
+
         await repos.project.create(id, user.id, name, description);
         return c.json({ id, name, description }, 201);
     } catch (err) {
+        console.error('[Management] Failed to create project:', err);
         return c.json({ error: 'Failed' }, 500);
     }
 });
@@ -201,6 +215,18 @@ management.post('/projects/:id/gateway-keys', async (c) => {
     const exists = await repos.project.existsForUser(projectId, user.id);
     if (!exists) return c.json({ error: 'Unauthorized' }, 403);
 
+    // FREE TIER: Max 3 gateway keys per user (across all projects)
+    const totalKeys = await repos.gatewayKey.countByUser(user.id);
+    if (totalKeys >= 3) {
+        console.warn(`[Management] User ${user.id} exceeded max gateway keys (3)`);
+        return c.json({
+            error: 'Maximum gateway key limit reached',
+            message: 'Free tier allows maximum 3 gateway keys. Please contact support for more.',
+            limit: 3,
+            current: totalKeys
+        }, 400);
+    }
+
     const rawKey = generateGatewayKey();
     const hashedKey = await hashGatewayKey(rawKey);
     const keyHint = `${rawKey.slice(0, 10)}...${rawKey.slice(-4)}`;
@@ -213,9 +239,9 @@ management.post('/projects/:id/gateway-keys', async (c) => {
             keyHash: hashedKey,
             keyHint: keyHint,
             name,
-            monthlyLimitUsd: monthly_limit_usd || 0,
-            rateLimitPerMin: rate_limit_per_min || 60,
-            rateLimitPerDay: rate_limit_per_day || 10000,
+            monthlyLimitUsd: monthly_limit_usd || 10,
+            rateLimitPerMin: rate_limit_per_min || 30,
+            rateLimitPerDay: rate_limit_per_day || 3000,
         });
 
         return c.json({
@@ -225,6 +251,7 @@ management.post('/projects/:id/gateway-keys', async (c) => {
             key_hint: keyHint
         }, 201);
     } catch (err) {
+        console.error('[Management] Failed to create gateway key:', err);
         return c.json({ error: 'Failed to generate key' }, 500);
     }
 });

@@ -23,10 +23,10 @@ export interface GatewayKey {
     key_hint: string;
     name: string;
     status: 'active' | 'revoked';
-    monthly_limit_usd: number;
+    monthly_limit_usd: number;  // Default: 10 (Free tier)
     current_month_usage_usd: number;
-    rate_limit_per_min: number;
-    rate_limit_per_day: number;
+    rate_limit_per_min: number;  // Default: 30 (Free tier)
+    rate_limit_per_day: number;  // Default: 3000 (Free tier)
     created_at: string;
     revoked_at?: string;
 }

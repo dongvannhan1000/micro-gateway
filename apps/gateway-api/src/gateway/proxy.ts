@@ -127,10 +127,14 @@ export async function proxyHandler(c: Context<{ Bindings: Env; Variables: Variab
     // Debug log for Google API troubleshooting
     if (providerName === 'google') {
         const safeUrl = forwardUrl.replace(/key=([^&]+)/, 'key=***REDACTED***');
+        const safeHeaders = { ...headers };
+        if (safeHeaders['Authorization']) {
+            safeHeaders['Authorization'] = safeHeaders['Authorization'].replace(/Bearer (.+)/, 'Bearer ***REDACTED***');
+        }
         console.log(`[Gateway] [Proxy] Google Request Debug:`);
         console.log(`  URL: ${safeUrl}`);
         console.log(`  Method: ${c.req.method}`);
-        console.log(`  Headers:`, JSON.stringify(headers, null, 2));
+        console.log(`  Headers:`, JSON.stringify(safeHeaders, null, 2));
         console.log(`  Body:`, forwardBody);
     }
 

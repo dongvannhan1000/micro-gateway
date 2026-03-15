@@ -88,6 +88,18 @@ export class ProjectRepository {
     return result !== null;
   }
 
+  /**
+   * Count total projects for a user.
+   * Used for enforcing free tier limits (max 2 projects).
+   */
+  async countByUser(userId: string): Promise<number> {
+    const { results } = await this.db.execute(
+      `SELECT COUNT(*) as count FROM projects WHERE user_id = ?`,
+      [userId]
+    );
+    return results[0]?.count || 0;
+  }
+
   async findNameById(id: string): Promise<{ name: string } | null> {
     return this.db.first<{ name: string }>(
       `SELECT name FROM projects WHERE id = ?`,
