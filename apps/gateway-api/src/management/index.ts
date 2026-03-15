@@ -130,7 +130,7 @@ management.post('/projects/:id/provider-configs', async (c) => {
 
     // Encryption secret (should match the one in gateway proxy)
     const secret = c.env.ENCRYPTION_SECRET;
-    
+
     if (!secret) {
         console.error('[Management] Action: save_provider_config failed (Metadata: reason=ENCRYPTION_SECRET_missing)');
         return c.json({ error: 'Internal Server Error: Encryption not configured' }, 500);
@@ -158,6 +158,21 @@ management.post('/projects/:id/provider-configs', async (c) => {
     } catch (err: any) {
         console.error('[Management] Action: save_provider_config error (Metadata: message=' + err.message + ')');
         return c.json({ error: 'Failed to save provider config' }, 500);
+    }
+});
+
+management.delete('/projects/:id/provider-configs/:provider', async (c) => {
+    const user = c.get('user')!;
+    const repos = c.get('repos')!;
+    const { id: projectId, provider } = c.req.param();
+
+    try {
+        const changes = await repos.providerConfig.delete(projectId, provider, user.id);
+        if (changes === 0) return c.json({ error: 'Not found' }, 404);
+        return c.json({ success: true, message: 'Provider config deleted' });
+    } catch (err) {
+        console.error('[Management] Failed to delete provider config:', err);
+        return c.json({ error: 'Failed to delete' }, 500);
     }
 });
 

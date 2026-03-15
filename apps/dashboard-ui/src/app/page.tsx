@@ -245,6 +245,76 @@ export default function HomePage() {
         </div>
       </section>
 
+      {/* Why Trust Us Section */}
+      <section className="container mx-auto px-4 py-20 bg-glass-bg/50">
+        <div className="max-w-4xl mx-auto text-center space-y-8">
+          <h2 className="text-3xl font-bold">
+            Why Trust Us?
+          </h2>
+          <p className="text-lg text-muted max-w-2xl mx-auto">
+            Security isn't just a feature—it's the foundation. Here's why developers trust Micro-Security Gateway.
+          </p>
+
+          <div className="grid md:grid-cols-3 gap-6 text-left">
+            {/* Open Source */}
+            <div className="glass-card p-6 space-y-4">
+              <div className="flex items-center gap-3 mb-3">
+                <Github className="w-6 h-6 text-accent-blue" />
+                <h3 className="font-bold text-lg">100% Open Source</h3>
+              </div>
+              <p className="text-muted text-sm">
+                Every line of code is public on GitHub. Audit the implementation, verify the encryption, and contribute improvements.
+              </p>
+              <a
+                href="https://github.com/dongvannhan1000/micro-gateway"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-2 text-accent-blue hover:underline text-sm font-medium"
+              >
+                View Source Code
+                <ArrowRight className="w-4 h-4" />
+              </a>
+            </div>
+
+            {/* Military-Grade Encryption */}
+            <div className="glass-card p-6 space-y-4">
+              <div className="flex items-center gap-3 mb-3">
+                <Lock className="w-6 h-6 text-green-500" />
+                <h3 className="font-bold text-lg">AES-256 Encryption</h3>
+              </div>
+              <p className="text-muted text-sm">
+                Your API keys are encrypted with AES-256-GCM before leaving your browser. Military-grade encryption that's transparent and verifiable.
+              </p>
+              <a
+                href="/security"
+                className="inline-flex items-center gap-2 text-accent-blue hover:underline text-sm font-medium"
+              >
+                Learn About Security
+                <ArrowRight className="w-4 h-4" />
+              </a>
+            </div>
+
+            {/* Zero Logging */}
+            <div className="glass-card p-6 space-y-4">
+              <div className="flex items-center gap-3 mb-3">
+                <Shield className="w-6 h-6 text-purple-500" />
+                <h3 className="font-bold text-lg">Zero Prompt Logging</h3>
+              </div>
+              <p className="text-muted text-sm">
+                We never store your prompts or responses. Only usage metrics (tokens, costs) are logged for billing. Your data stays yours.
+              </p>
+              <a
+                href="/security"
+                className="inline-flex items-center gap-2 text-accent-blue hover:underline text-sm font-medium"
+              >
+                Read Privacy Policy
+                <ArrowRight className="w-4 h-4" />
+              </a>
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* Managed Version CTA */}
       <section className="container mx-auto px-4 py-20">
         <div className="max-w-4xl mx-auto">

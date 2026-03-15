@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { saveProviderConfig, updateProjectSettings } from '@/app/dashboard/actions';
+import { deleteProviderConfig, saveProviderConfig, updateProjectSettings } from '@/app/dashboard/actions';
 import {
     Loader2,
     ShieldCheck,
@@ -16,7 +16,8 @@ import {
     ArrowRight,
     Lock,
     Eye,
-    EyeOff
+    EyeOff,
+    RefreshCw
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
@@ -88,6 +89,12 @@ export function ProjectSettingsForm({
     const [selectedProvider, setSelectedProvider] = useState('openai');
     const [providerKey, setProviderKey] = useState('');
 
+    // Delete confirmation dialog state
+    const [deleteDialog, setDeleteDialog] = useState<{ open: boolean; provider: string }>({
+        open: false,
+        provider: '',
+    });
+
     // Provider configuration
     const providers_config = [
         { id: 'openai', name: 'OpenAI', description: 'GPT-4, GPT-4o, o1 models' },
@@ -137,6 +144,29 @@ export function ProjectSettingsForm({
         } finally {
             setIsPending(false);
         }
+    };
+
+    const handleDeleteProvider = async (provider: string) => {
+        setDeleteDialog({ open: true, provider });
+    };
+
+    const confirmDeleteProvider = async () => {
+        setIsPending(true);
+        try {
+            await deleteProviderConfig(projectId, deleteDialog.provider);
+            setDeleteDialog({ open: false, provider: '' });
+            router.refresh();
+        } catch (e) {
+            console.error(e);
+        } finally {
+            setIsPending(false);
+        }
+    };
+
+    const handleUpdateProvider = (provider: string) => {
+        setSelectedProvider(provider);
+        // Scroll to form
+        document.getElementById('provider-key-form')?.scrollIntoView({ behavior: 'smooth' });
     };
 
     const handleSaveAliases = async () => {
@@ -300,9 +330,25 @@ export function ProjectSettingsForm({
                                             </div>
                                         </div>
                                         {hasProvider(p.id) ? (
-                                            <div className="flex items-center gap-2 px-4 py-2 bg-green-400/10 rounded-full border border-green-400/30">
-                                                <span className="w-2 h-2 rounded-full bg-green-400 animate-pulse"></span>
-                                                <span className="text-xs text-green-400 font-bold uppercase tracking-wider">Active</span>
+                                            <div className="flex items-center gap-2">
+                                                <div className="flex items-center gap-2 px-3 py-1.5 bg-green-400/10 rounded-full border border-green-400/30">
+                                                    <span className="w-2 h-2 rounded-full bg-green-400 animate-pulse"></span>
+                                                    <span className="text-xs text-green-400 font-bold uppercase tracking-wider">Active</span>
+                                                </div>
+                                                <button
+                                                    onClick={() => handleUpdateProvider(p.id)}
+                                                    className="text-xs text-accent-blue font-medium hover:underline px-3 py-1.5 bg-accent-blue/10 rounded-full border border-accent-blue/20 transition-all hover:bg-accent-blue/20"
+                                                    title="Update API key"
+                                                >
+                                                    <RefreshCw className="w-3 h-3" />
+                                                </button>
+                                                <button
+                                                    onClick={() => handleDeleteProvider(p.id)}
+                                                    className="text-xs text-red-400 font-medium hover:underline px-3 py-1.5 bg-red-400/10 rounded-full border border-red-400/20 transition-all hover:bg-red-400/20"
+                                                    title="Delete API key"
+                                                >
+                                                    <Trash2 className="w-3 h-3" />
+                                                </button>
                                             </div>
                                         ) : (
                                             <button
@@ -322,7 +368,7 @@ export function ProjectSettingsForm({
                                     <Plus className="w-4 h-4 text-accent-blue" />
                                     Configure {providers_config.find(p => p.id === selectedProvider)?.name || selectedProvider} API Key
                                 </h3>
-                                <form onSubmit={handleSaveProvider} className="space-y-4">
+                                <form id="provider-key-form" onSubmit={handleSaveProvider} className="space-y-4">
                                     <div className="space-y-2">
                                         <label className="text-xs font-bold text-muted uppercase tracking-widest flex items-center gap-2">
                                             <Key className="w-3 h-3 text-accent-blue" />
@@ -362,6 +408,35 @@ export function ProjectSettingsForm({
                                     </div>
                                 </form>
                             </div>
+
+                            {/* Delete Confirmation Dialog */}
+                            {deleteDialog.open && (
+                                <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+                                    <div className="glass-card max-w-md w-full p-6 space-y-4">
+                                        <h3 className="text-xl font-bold text-red-400">Delete Provider Key?</h3>
+                                        <p className="text-sm text-muted">
+                                            Are you sure you want to delete the {deleteDialog.provider} API key?
+                                            This action cannot be undone. API calls using this provider will fail.
+                                        </p>
+                                        <div className="flex gap-3 pt-4">
+                                            <button
+                                                onClick={() => setDeleteDialog({ open: false, provider: '' })}
+                                                className="flex-1 px-4 py-2 rounded-lg border border-gray-600 text-gray-300 hover:bg-gray-800 transition-colors"
+                                                disabled={isPending}
+                                            >
+                                                Cancel
+                                            </button>
+                                            <button
+                                                onClick={confirmDeleteProvider}
+                                                className="flex-1 px-4 py-2 rounded-lg bg-red-600 text-white hover:bg-red-700 transition-colors font-medium"
+                                                disabled={isPending}
+                                            >
+                                                {isPending ? 'Deleting...' : 'Delete Key'}
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
                         </div>
                     )}
 

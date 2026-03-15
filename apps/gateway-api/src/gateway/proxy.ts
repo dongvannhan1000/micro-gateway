@@ -73,25 +73,72 @@ export async function proxyHandler(c: Context<{ Bindings: Env; Variables: Variab
         return openAiError(c, 'Internal Server Error', 'server_error', null, 500);
     }
 
-    // 3. Prepare Forward Request
+    // 3. Prepare Forward Request with Provider-Specific Headers
     // Remove leading /v1/ and ensure no leading slash for relative URL construction
     let relativePath = c.req.path.replace(/^\/v1/, '');
     if (relativePath.startsWith('/')) relativePath = relativePath.slice(1);
 
-    // Ensure targetBaseUrl ends with /
-    const baseUrl = targetBaseUrl.endsWith('/') ? targetBaseUrl : `${targetBaseUrl}/`;
+    // Handle provider-specific authentication
+    let forwardUrl = '';
+    const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+    };
 
-    const forwardUrl = `${baseUrl}${relativePath}`;
-    console.log(`[Gateway] [Proxy] Target: ${providerName} | URL: ${forwardUrl}`);
+    switch (providerName) {
+        case 'openai':
+        case 'groq':
+        case 'together':
+        case 'deepseek':
+            // OpenAI-compatible providers use Bearer token
+            headers['Authorization'] = `Bearer ${providerKey}`;
+            const baseUrl = targetBaseUrl.endsWith('/') ? targetBaseUrl : `${targetBaseUrl}/`;
+            forwardUrl = `${baseUrl}${relativePath}`;
+            break;
+
+        case 'anthropic':
+            // Anthropic uses x-api-key header
+            headers['x-api-key'] = providerKey;
+            headers['anthropic-version'] = '2023-06-01';
+            // Anthropic base URL already ends with /, don't add another
+            const anthropicBaseUrl = targetBaseUrl.endsWith('/') ? targetBaseUrl : `${targetBaseUrl}/`;
+            forwardUrl = `${anthropicBaseUrl}${relativePath}`;
+            break;
+
+        case 'google':
+            // Google OpenAI-compatible endpoint needs BOTH:
+            // - API key in URL parameter
+            // - AND Authorization header (unlike native Gemini API)
+            const urlSeparator = targetBaseUrl.includes('?') ? '&' : '?';
+            forwardUrl = `${targetBaseUrl}${relativePath}${urlSeparator}key=${providerKey}`;
+            headers['Authorization'] = `Bearer ${providerKey}`;
+            break;
+
+        default:
+            // Fallback to Bearer token for unknown providers
+            headers['Authorization'] = `Bearer ${providerKey}`;
+            const defaultBaseUrl = targetBaseUrl.endsWith('/') ? targetBaseUrl : `${targetBaseUrl}/`;
+            forwardUrl = `${defaultBaseUrl}${relativePath}`;
+            break;
+    }
 
     // Only send clean headers to provider - do NOT forward original headers
     const forwardBody = JSON.stringify({ ...body, model: targetModel });
+
+    // Debug log for Google API troubleshooting
+    if (providerName === 'google') {
+        const safeUrl = forwardUrl.replace(/key=([^&]+)/, 'key=***REDACTED***');
+        console.log(`[Gateway] [Proxy] Google Request Debug:`);
+        console.log(`  URL: ${safeUrl}`);
+        console.log(`  Method: ${c.req.method}`);
+        console.log(`  Headers:`, JSON.stringify(headers, null, 2));
+        console.log(`  Body:`, forwardBody);
+    }
+
+    console.log(`[Gateway] [Proxy] Target: ${providerName} | URL: ${forwardUrl.replace(/key=([^&]+)/, 'key=***REDACTED***')}`);
+
     const forwardRequest = new Request(forwardUrl, {
         method: c.req.method,
-        headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${providerKey}`,
-        },
+        headers,
         body: forwardBody,
     });
 
@@ -100,6 +147,15 @@ export async function proxyHandler(c: Context<{ Bindings: Env; Variables: Variab
     try {
         const response = await fetch(forwardRequest);
         const latency = Date.now() - startTime;
+
+        // Debug: Log error response body for Google (don't consume stream)
+        if (!response.ok && providerName === 'google') {
+            const clonedResponse = response.clone();
+            const responseText = await clonedResponse.text();
+            console.log(`[Gateway] [Proxy] Google Error Response:`);
+            console.log(`  Status: ${response.status} ${response.statusText}`);
+            console.log(`  Body:`, responseText);
+        }
 
         // 4. Handle Streaming
         if (body.stream) {

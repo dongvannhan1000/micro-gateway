@@ -79,6 +79,20 @@ export class ProviderConfigRepository {
   }
 
   /**
+   * Delete a provider config for a project (verifies user ownership).
+   * Returns the number of deleted rows.
+   */
+  async delete(projectId: string, provider: string, userId: string): Promise<number> {
+    const { changes } = await this.db.run(
+      `DELETE FROM provider_configs
+       WHERE project_id = ? AND provider = ?
+       AND project_id IN (SELECT id FROM projects WHERE user_id = ?)`,
+      [projectId, provider, userId]
+    );
+    return changes;
+  }
+
+  /**
    * List distinct providers for a project.
    * Used by /v1/models endpoint.
    */

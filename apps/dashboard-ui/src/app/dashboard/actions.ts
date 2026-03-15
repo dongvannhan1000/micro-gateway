@@ -94,6 +94,26 @@ export async function saveProviderConfig(projectId: string, provider: string, ap
     }
 }
 
+export async function deleteProviderConfig(projectId: string, provider: string) {
+    const supabase = await createClient();
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) throw new Error('Unauthorized');
+
+    try {
+        await fetchGateway(
+            `/api/projects/${projectId}/provider-configs/${provider}`,
+            session.access_token,
+            {
+                method: 'DELETE',
+            }
+        );
+        revalidatePath(`/dashboard/projects/${projectId}/settings`);
+        return { success: true };
+    } catch (e: any) {
+        return { error: e.message };
+    }
+}
+
 export async function getAnalyticsSummary(projectId: string) {
     const supabase = await createClient();
     const { data: { session } } = await supabase.auth.getSession();
