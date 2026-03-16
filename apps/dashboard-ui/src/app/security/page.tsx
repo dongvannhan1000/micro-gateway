@@ -62,9 +62,11 @@ export default function SecurityPage() {
 
             <div className="prose prose-lg dark:prose-invert max-w-none mb-8">
               <p className="text-gray-600 dark:text-gray-300 text-lg">
-                Your API keys are encrypted using <strong>industry-standard practices</strong> before they
-                even leave your browser. We use <strong>AES-256-GCM</strong> encryption with
-                <strong> HKDF key derivation</strong> to ensure your keys remain secure.
+                Your provider API keys are encrypted at REST using <strong>AES-256-GCM</strong> with
+                <strong>HKDF key derivation</strong> from a master encryption key. Keys are
+                <strong>temporarily decrypted in memory</strong> only when proxying requests to AI providers
+                (typically &lt;1 second). Each key uses a <strong>unique initialization vector (IV)</strong>
+                for encryption.
               </p>
             </div>
 
@@ -72,10 +74,10 @@ export default function SecurityPage() {
 
             <div className="mt-8 p-6 bg-blue-50 dark:bg-blue-900/20 border-l-4 border-blue-500 rounded-r-lg">
               <p className="font-semibold text-blue-900 dark:text-blue-100 mb-2">
-                Your key is encrypted BEFORE it leaves your browser
+                Encryption flow: Browser → Database → Temporary Decryption → AI Provider
               </p>
               <p className="text-sm text-blue-800 dark:text-blue-200">
-                Algorithm: AES-256-GCM • Key Derivation: HKDF • Hashing: SHA-256
+                Algorithm: AES-256-GCM • Key Derivation: HKDF (from master key) • Unique IV per key
               </p>
             </div>
           </div>
@@ -173,7 +175,7 @@ export default function SecurityPage() {
                   <div className="text-gray-600 dark:text-gray-400">Encrypted key deleted from DB</div>
                 </div>
                 <p className="text-sm text-gray-500 dark:text-gray-400 mt-4">
-                  Note: We CANNOT access your key after revocation (it&apos;s encrypted)
+                  Note: After revocation, the encrypted key is deleted from our database
                 </p>
               </div>
             </div>

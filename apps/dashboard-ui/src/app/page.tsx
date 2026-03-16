@@ -367,7 +367,7 @@ export default function HomePage() {
             {[
               {
                 q: "Why should I trust you with my API keys?",
-                a: "You shouldn't. That's why we offer self-hosted deployment. Your provider keys never leave your infrastructure. For our managed version, we use per-user encryption keys and security audit logging.",
+                a: "You shouldn't. That's why we offer self-hosted deployment. Your provider keys never leave your infrastructure. For our managed version, keys are encrypted with AES-256-GCM and only temporarily decrypted in memory when proxying requests.",
               },
               {
                 q: "What's the difference between self-hosted and managed?",
@@ -375,7 +375,7 @@ export default function HomePage() {
               },
               {
                 q: "Can I migrate from self-hosted to managed?",
-                a: "Yes! Export your config from self-hosted and import it to managed. Your provider keys are re-encrypted with managed encryption keys.",
+                a: "Yes! Export your config from self-hosted and import it to managed. Your provider keys are encrypted with AES-256-GCM for secure storage.",
               },
               {
                 q: "What AI providers do you support?",

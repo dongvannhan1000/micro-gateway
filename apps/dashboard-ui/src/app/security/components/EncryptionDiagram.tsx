@@ -26,7 +26,7 @@ export default function EncryptionDiagram() {
     },
     {
       title: 'Stored Encrypted',
-      description: 'Encrypted key stored in database (cannot be decrypted)',
+      description: 'Encrypted key stored in database with AES-256-GCM',
       icon: '💾',
       color: 'bg-yellow-500',
     },

@@ -1,5 +1,22 @@
 /**
  * Web Crypto utilities for Cloudflare Workers
+ *
+ * ENCRYPTION MODEL:
+ * - Provider API keys are encrypted with AES-256-GCM
+ * - Master key: ENCRYPTION_SECRET (environment variable)
+ * - Key derivation: HKDF from master key (SHARED for all keys)
+ * - Per-key uniqueness: Random IV (initialization vector) per key
+ *
+ * SECURITY TRADE-OFFS:
+ * - Master key compromise = All keys compromised (single point of failure)
+ * - Mitigated by: Cloudflare Workers isolation, no logging, minimal decryption window
+ * - Temporary decryption required for proxy functionality (unavoidable)
+ * - Decryption window: <1 second in memory during request processing
+ *
+ * IMPORTANT: This is NOT "per-key encryption" in the traditional sense.
+ * Traditional per-key encryption would derive encryption keys from the provider key itself,
+ * making decryption impossible without the original key. That model is incompatible
+ * with a proxy gateway that must decrypt keys to forward requests.
  */
 
 export async function hashGatewayKey(key: string): Promise<string> {

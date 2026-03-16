@@ -8,19 +8,19 @@ export default function SecurityFAQ() {
   const faqs = [
     {
       question: 'Can you see my API keys?',
-      answer: 'No. Your API keys are encrypted in your browser using AES-256-GCM BEFORE they are sent to our servers. We only store the encrypted version. The encryption key is derived from your API key itself, so even we cannot decrypt it without your original key.',
+      answer: 'Your provider API keys (OpenAI, Anthropic, etc.) are encrypted at REST in our database using AES-256-GCM with a master encryption key. However, to function as a proxy gateway, we MUST temporarily decrypt keys in memory when forwarding your requests to AI providers. Keys are never logged to disk or stored in plain text. Each key uses a unique initialization vector (IV), and the decrypted key exists only briefly in memory during request processing (typically < 1 second).',
     },
     {
       question: 'What if you get hacked?',
-      answer: 'If our database is compromised, attackers would only find encrypted API keys that they cannot decrypt. We use per-key encryption with HKDF key derivation, meaning each key is encrypted uniquely. There is no master key that can decrypt all API keys.',
+      answer: 'If our database is compromised, attackers would only find encrypted API keys. We use per-key encryption with HKDF key derivation, meaning each key is encrypted uniquely - there is no master key. However, keys are temporarily decrypted in memory during active requests. This is a necessary trade-off for a proxy gateway. We mitigate this risk by: (1) Using Cloudflare Workers isolated environments, (2) Never logging keys, (3) Keeping decryption window minimal (<1 second), (4) Auto-rotating encryption keys.',
     },
     {
       question: 'Do you log my prompts?',
       answer: 'No. We do NOT log your prompt content or AI responses. We only log usage metrics (request count, tokens used, costs) for billing and analytics. Your actual prompts and responses pass through our gateway transparently without being stored.',
     },
     {
-      question: 'Can I use my own encryption key?',
-      answer: 'Not currently, but we plan to add BYOK (Bring Your Own Key) support. This would allow you to provide your own encryption key for API key storage. Join our GitHub discussions to vote for this feature.',
+      question: 'Why do you need to decrypt my keys?',
+      answer: 'As a proxy gateway, we must decrypt your provider API keys temporarily to forward requests to AI providers like OpenAI. The flow is: (1) Your app sends request with your gateway key, (2) We validate your gateway key, (3) We decrypt your provider key in memory, (4) We forward request to OpenAI with the provider key, (5) The decrypted key is immediately discarded from memory. This decryption is necessary for the gateway to function - there is no way to proxy requests without accessing the API key.',
     },
     {
       question: 'Is this open source?',

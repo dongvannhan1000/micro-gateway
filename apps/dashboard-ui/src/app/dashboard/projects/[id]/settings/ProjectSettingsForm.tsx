@@ -402,7 +402,7 @@ export function ProjectSettingsForm({
                                         <div className="flex items-start gap-2">
                                             <Lock className="w-4 h-4 text-accent-blue flex-shrink-0 mt-0.5" />
                                             <p className="text-xs text-muted">
-                                                Keys are encrypted with AES-256-GCM using your project secret. Only the MSGateway worker can decrypt them for proxying.
+                                                Keys are encrypted with AES-256-GCM and stored securely. The gateway temporarily decrypts keys in memory only when proxying requests to AI providers.
                                             </p>
                                         </div>
                                     </div>
