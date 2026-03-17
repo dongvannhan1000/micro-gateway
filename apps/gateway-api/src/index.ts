@@ -16,15 +16,27 @@ app.get('/', (c) => {
 // Startup Validation Middleware
 let isBootstrapped = false;
 app.use('*', async (c, next) => {
+    // Handle preflight requests FIRST
+    if (c.req.method === 'OPTIONS') {
+      const origin = c.req.header('Origin');
+      if (origin) {
+        c.header('Access-Control-Allow-Origin', origin);
+        c.header('Access-Control-Allow-Credentials', 'true');
+        c.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+        c.header('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+      }
+      return c.text('', 204);
+    }
+
     if (!isBootstrapped) {
         const requiredSecrets: (keyof Env)[] = ['SUPABASE_JWT_SECRET', 'ENCRYPTION_SECRET', 'RESEND_API_KEY'];
         const missing = requiredSecrets.filter(s => !c.env[s]);
-        
+
         if (missing.length > 0) {
             console.error(`[GatewayService] Action: bootstrap failed (Metadata: missing_secrets=${missing.join(',')})`);
-            return c.json({ 
-                error: 'Server configuration error', 
-                message: 'Internal configuration is incomplete.' 
+            return c.json({
+                error: 'Server configuration error',
+                message: 'Internal configuration is incomplete.'
             }, 500);
         }
         isBootstrapped = true;
@@ -46,11 +58,6 @@ app.use('*', async (c, next) => {
     c.header('Access-Control-Allow-Credentials', 'true');
     c.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
     c.header('Access-Control-Allow-Headers', 'Content-Type, Authorization');
-  }
-
-  // Handle preflight requests
-  if (c.req.method === 'OPTIONS') {
-    return c.text('', 204 as any); // Type assertion for 204 status
   }
 
   // Prevent MIME type sniffing

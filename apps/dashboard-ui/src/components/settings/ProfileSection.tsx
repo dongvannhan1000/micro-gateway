@@ -44,13 +44,33 @@ export function ProfileSection() {
                 }
 
                 const data = await getUserProfile(session.access_token);
+
+                // Handle successful profile fetch
                 setProfile({
                     displayName: data.full_name || '',
-                    email: data.email || ''
+                    email: data.email || session.user?.email || ''
                 });
-            } catch (error) {
+            } catch (error: any) {
                 console.error('Failed to fetch profile:', error);
-                setErrors({ form: 'Failed to load profile' });
+
+                // Check if profile doesn't exist
+                const errorMessage = error?.message || '';
+                if (errorMessage.includes('not found') || errorMessage.includes('Profile not found')) {
+                    setErrors({
+                        form: 'Profile not found. Please complete your account setup or contact support.'
+                    });
+
+                    // Set email from Supabase session as fallback
+                    const { data: { session } } = await supabase.auth.getSession();
+                    if (session?.user?.email) {
+                        setProfile({
+                            displayName: session.user.email.split('@')[0],
+                            email: session.user.email
+                        });
+                    }
+                } else {
+                    setErrors({ form: 'Failed to load profile. Please try again.' });
+                }
             } finally {
                 setIsInitialLoading(false);
             }

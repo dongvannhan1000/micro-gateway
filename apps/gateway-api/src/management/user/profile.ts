@@ -30,12 +30,34 @@ profile.get('/profile', async (c) => {
   const repos = c.get('repos')!;
 
   try {
-    const userProfile = await repos.userProfile.findById(user.id);
+    let userProfile = await repos.userProfile.findById(user.id);
+
+    // Auto-create profile if it doesn't exist
     if (!userProfile) {
-      return c.json({
-        error: 'Profile not found',
-        message: 'User profile does not exist'
-      }, 404);
+      console.log(`[Profile] Creating profile for user: ${user.id}`);
+
+      try {
+        await repos.userProfile.create({
+          id: user.id,
+          email: user.email,
+          displayName: user.email?.split('@')[0] || 'User', // Default display name from email
+        });
+
+        // Fetch the newly created profile
+        userProfile = await repos.userProfile.findById(user.id);
+
+        if (!userProfile) {
+          throw new Error('Failed to create user profile');
+        }
+
+        console.log(`[Profile] Successfully created profile for user: ${user.id}`);
+      } catch (createError) {
+        console.error('[Profile] Failed to auto-create profile:', createError);
+        return c.json({
+          error: 'Profile creation failed',
+          message: 'Could not create user profile. Please contact support.'
+        }, 500);
+      }
     }
 
     // Transform to API response format

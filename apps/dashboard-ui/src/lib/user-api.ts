@@ -9,7 +9,7 @@ import { fetchGateway } from '@/utils/api';
 
 // Profile APIs
 export async function getUserProfile(token: string) {
-  return fetchGateway('/api/management/user/profile', token);
+  return fetchGateway('/api/user/profile', token);
 }
 
 export async function updateUserProfile(token: string, data: {
@@ -20,14 +20,14 @@ export async function updateUserProfile(token: string, data: {
   timezone?: string;
   language?: string;
 }) {
-  return fetchGateway('/api/management/user/profile', token, {
+  return fetchGateway('/api/user/profile', token, {
     method: 'PUT',
     body: JSON.stringify(data),
   });
 }
 
 export async function changePassword(token: string, currentPassword: string, newPassword: string) {
-  return fetchGateway('/api/management/user/change-password', token, {
+  return fetchGateway('/api/user/change-password', token, {
     method: 'POST',
     body: JSON.stringify({
       current_password: currentPassword,
@@ -40,11 +40,11 @@ export async function changePassword(token: string, currentPassword: string, new
 export async function getUserUsage(token: string, period: 'day' | 'week' | 'month' | 'year' = 'month', projectId?: string) {
   const params = new URLSearchParams({ period });
   if (projectId) params.append('project_id', projectId);
-  return fetchGateway(`/api/management/user/usage?${params.toString()}`, token);
+  return fetchGateway(`/api/user/usage?${params.toString()}`, token);
 }
 
 export async function getUserQuotas(token: string) {
-  return fetchGateway('/api/management/user/quotas', token);
+  return fetchGateway('/api/user/quotas', token);
 }
 
 // Project Analytics APIs
@@ -84,7 +84,7 @@ export async function deleteGatewayKey(token: string, projectId: string, keyId: 
 // Notification Preferences (placeholder for future implementation)
 export async function getNotificationPreferences(token: string) {
   // TODO: Implement when backend endpoint is ready
-  return fetchGateway('/api/management/user/notifications', token);
+  return fetchGateway('/api/user/notifications', token);
 }
 
 export async function updateNotificationPreferences(token: string, preferences: {
@@ -94,7 +94,7 @@ export async function updateNotificationPreferences(token: string, preferences: 
   usageThreshold: number;
 }) {
   // TODO: Implement when backend endpoint is ready
-  return fetchGateway('/api/management/user/notifications', token, {
+  return fetchGateway('/api/user/notifications', token, {
     method: 'PUT',
     body: JSON.stringify(preferences),
   });

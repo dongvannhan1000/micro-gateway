@@ -21,6 +21,21 @@ export class UserRepository {
   }
 
   /**
+   * Create new user profile
+   */
+  async create(data: {
+    id: string;
+    email: string;
+    displayName?: string;
+  }): Promise<void> {
+    await this.db.run(
+      `INSERT INTO users (id, email, display_name, trial_start_date, trial_max_requests)
+       VALUES (?, ?, ?, CURRENT_DATE, 10000)`,
+      [data.id, data.email, data.displayName || data.email?.split('@')[0] || 'User']
+    );
+  }
+
+  /**
    * Update user profile
    */
   async updateProfile(id: string, data: {
