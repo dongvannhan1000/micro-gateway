@@ -9,10 +9,23 @@ export default function RegisterPage() {
     const [isPending, setIsPending] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [isSuccess, setIsSuccess] = useState(false);
+    const [passwordMatchError, setPasswordMatchError] = useState<string | null>(null);
+    const [passwordsMatch, setPasswordsMatch] = useState<boolean | null>(null);
 
     async function handleSubmit(formData: FormData) {
+        const password = formData.get('password') as string;
+        const confirmPassword = formData.get('confirmPassword') as string;
+
+        // Client-side validation for password matching
+        if (password !== confirmPassword) {
+            setPasswordMatchError('Passwords do not match');
+            setPasswordsMatch(false);
+            return;
+        }
+
         setIsPending(true);
         setError(null);
+        setPasswordMatchError(null);
 
         const result = await signup(formData);
         if (result?.error) {
@@ -22,6 +35,40 @@ export default function RegisterPage() {
         }
 
         setIsPending(false);
+    }
+
+    function handlePasswordChange(e: React.ChangeEvent<HTMLInputElement>) {
+        const password = e.target.value;
+        const confirmPasswordInput = document.getElementById('confirmPassword') as HTMLInputElement;
+        const confirmPassword = confirmPasswordInput?.value;
+
+        if (confirmPassword && password !== confirmPassword) {
+            setPasswordsMatch(false);
+            setPasswordMatchError('Passwords do not match');
+        } else if (confirmPassword && password === confirmPassword) {
+            setPasswordsMatch(true);
+            setPasswordMatchError(null);
+        } else {
+            setPasswordsMatch(null);
+            setPasswordMatchError(null);
+        }
+    }
+
+    function handleConfirmPasswordChange(e: React.ChangeEvent<HTMLInputElement>) {
+        const confirmPassword = e.target.value;
+        const passwordInput = document.getElementById('password') as HTMLInputElement;
+        const password = passwordInput?.value;
+
+        if (password && confirmPassword !== password) {
+            setPasswordsMatch(false);
+            setPasswordMatchError('Passwords do not match');
+        } else if (password && confirmPassword === password) {
+            setPasswordsMatch(true);
+            setPasswordMatchError(null);
+        } else {
+            setPasswordsMatch(null);
+            setPasswordMatchError(null);
+        }
     }
 
     if (isSuccess) {
@@ -92,9 +139,44 @@ export default function RegisterPage() {
                                     type="password"
                                     placeholder="••••••••"
                                     required
+                                    onChange={handlePasswordChange}
                                     className="w-full bg-background border border-glass-border rounded-lg py-2.5 pl-10 pr-4 text-sm focus:outline-none focus:border-accent-blue transition-colors"
                                 />
                             </div>
+                        </div>
+
+                        <div className="space-y-2">
+                            <label className="text-xs font-medium text-muted uppercase tracking-wider" htmlFor="confirmPassword">
+                                Confirm Password
+                            </label>
+                            <div className="relative">
+                                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted" />
+                                <input
+                                    id="confirmPassword"
+                                    name="confirmPassword"
+                                    type="password"
+                                    placeholder="••••••••"
+                                    required
+                                    onChange={handleConfirmPasswordChange}
+                                    className={`w-full bg-background border rounded-lg py-2.5 pl-10 pr-4 text-sm focus:outline-none transition-colors ${
+                                        passwordsMatch === false
+                                            ? 'border-red-400 focus:border-red-400'
+                                            : passwordsMatch === true
+                                                ? 'border-green-400 focus:border-green-400'
+                                                : 'border-glass-border focus:border-accent-blue'
+                                    }`}
+                                />
+                            </div>
+                            {passwordMatchError && (
+                                <p className="text-red-400 text-xs mt-1 flex items-center gap-1">
+                                    <span>•</span> {passwordMatchError}
+                                </p>
+                            )}
+                            {passwordsMatch === true && !passwordMatchError && (
+                                <p className="text-green-400 text-xs mt-1 flex items-center gap-1">
+                                    <CheckCircle2 className="w-3 h-3" /> Passwords match
+                                </p>
+                            )}
                         </div>
 
                         {error && (
@@ -105,8 +187,8 @@ export default function RegisterPage() {
 
                         <button
                             type="submit"
-                            disabled={isPending}
-                            className="w-full bg-neon-gradient hover:opacity-90 text-white font-medium py-2.5 rounded-lg flex items-center justify-center gap-2 transition-all disabled:opacity-50"
+                            disabled={isPending || passwordsMatch === false}
+                            className="w-full bg-neon-gradient hover:opacity-90 text-white font-medium py-2.5 rounded-lg flex items-center justify-center gap-2 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                         >
                             {isPending ? (
                                 <Loader2 className="w-4 h-4 animate-spin" />

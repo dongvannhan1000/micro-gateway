@@ -20,10 +20,11 @@ CREATE TABLE IF NOT EXISTS gateway_keys_new (
   FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE
 );
 
--- Step 1b: Copy existing data
+-- Step 1b: Copy existing data (handle new column that doesn't exist yet)
 INSERT INTO gateway_keys_new
   SELECT id, project_id, key_hash, name, rate_limit_per_min, rate_limit_per_day,
-         monthly_limit_usd, current_month_usage_usd, last_cost_update, revoked_at, created_at
+         monthly_limit_usd, current_month_usage_usd,
+         NULL as last_cost_update, revoked_at, created_at
   FROM gateway_keys;
 
 -- Step 1c: Drop old table and rename new one

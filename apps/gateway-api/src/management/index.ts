@@ -6,6 +6,7 @@ import { generateGatewayKey, hashGatewayKey } from '../utils/crypto';
 import { syncPricingFromLiteLLM } from './sync-pricing';
 import { alertRouter } from './alerts';
 import { analyticsRouter } from './analytics';
+import { userSettingsRouter } from './user';
 
 const management = new Hono<{ Bindings: Env; Variables: Variables }>();
 
@@ -24,6 +25,9 @@ management.route('/projects/:projectId/alerts', alertRouter);
 
 // Analytics (Nested)
 management.route('/projects/:projectId/analytics', analyticsRouter);
+
+// User Settings (Global)
+management.route('/user', userSettingsRouter);
 
 // --- Gateway Keys (Global) ---
 
