@@ -1,8 +1,10 @@
 'use client';
 
-import React, { useState } from 'react';
-import { Shield, Laptop, Trash2, Plus, RefreshCw, Key, Eye, EyeOff } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Shield, Laptop, Trash2, Plus, Key, Eye, AlertCircle } from 'lucide-react';
 import { SettingsSection, Button, TextInput, Toggle } from './index';
+import { createClient } from '@/utils/supabase/client';
+import { getGatewayKeys, createGatewayKey, deleteGatewayKey } from '@/lib/user-api';
 
 interface Session {
     id: string;
@@ -23,16 +25,19 @@ interface AuditLog {
     status: 'success' | 'warning' | 'danger';
 }
 
-interface ApiKey {
+interface GatewayKey {
     id: string;
     name: string;
-    key: string;
-    created: string;
-    lastUsed: string;
-    scopes: string[];
+    prefix: string;
+    key?: string; // Only shown on creation
+    created_at: string;
+    last_used: string | null;
+    is_active: boolean;
 }
 
 export function SecuritySection() {
+    const [currentProjectId, setCurrentProjectId] = useState<string>('');
+    const [apiKeys, setApiKeys] = useState<GatewayKey[]>([]);
     const [sessions, setSessions] = useState<Session[]>([
         {
             id: '1',
@@ -81,90 +86,123 @@ export function SecuritySection() {
         }
     ]);
 
-    const [apiKeys, setApiKeys] = useState<ApiKey[]>([
-        {
-            id: '1',
-            name: 'Production Key',
-            key: 'sk_live_...xyz',
-            created: '2024-01-15',
-            lastUsed: '2 hours ago',
-            scopes: ['read', 'write']
-        }
-    ]);
-
     const [showCreateKeyModal, setShowCreateKeyModal] = useState(false);
     const [newKeyName, setNewKeyName] = useState('');
     const [twoFactorEnabled, setTwoFactorEnabled] = useState(false);
-    const [isLoading, setIsLoading] = useState(false);
+    const [isLoadingKeys, setIsLoadingKeys] = useState(true);
+    const [isCreatingKey, setIsCreatingKey] = useState(false);
+    const [newKeyData, setNewKeyData] = useState<{ key: string; name: string } | null>(null);
+    const [error, setError] = useState<string>('');
+
+    // Load project ID and keys on mount
+    useEffect(() => {
+        async function loadData() {
+            try {
+                // Get project ID from localStorage
+                const projectId = localStorage.getItem('currentProjectId') || '';
+                setCurrentProjectId(projectId);
+
+                if (!projectId) {
+                    setError('No project selected. Please select a project first.');
+                    setIsLoadingKeys(false);
+                    return;
+                }
+
+                // Load gateway keys
+                const supabase = await createClient();
+                const { data: { session } } = await supabase.auth.getSession();
+
+                if (session?.access_token) {
+                    const response = await getGatewayKeys(session.access_token, projectId);
+                    if (response.keys) {
+                        setApiKeys(response.keys);
+                    }
+                }
+            } catch (err) {
+                console.error('Failed to load gateway keys:', err);
+                setError('Failed to load API keys. Please try again.');
+            } finally {
+                setIsLoadingKeys(false);
+            }
+        }
+
+        loadData();
+    }, []);
 
     const revokeSession = async (sessionId: string) => {
         if (!confirm('Are you sure you want to revoke this session?')) return;
 
         setSessions(sessions.filter(s => s.id !== sessionId));
-        // API call to revoke session
-        // await fetch(`/api/management/user/sessions/${sessionId}`, { method: 'DELETE' });
+        // TODO: Implement when backend endpoint is ready
+        // await revokeSession(token, sessionId);
     };
 
     const revokeAllSessions = async () => {
         if (!confirm('Are you sure you want to revoke all other sessions?')) return;
 
         setSessions(sessions.filter(s => s.current));
-        // API call to revoke all sessions
-        // await fetch('/api/management/user/sessions', { method: 'DELETE' });
+        // TODO: Implement when backend endpoint is ready
+        // await revokeAllOtherSessions(token);
     };
 
     const createApiKey = async () => {
-        if (!newKeyName.trim()) return;
+        if (!newKeyName.trim() || !currentProjectId) return;
 
-        setIsLoading(true);
-        // API call to create API key
-        // const response = await fetch('/api/management/user/api-keys', {
-        //     method: 'POST',
-        //     body: JSON.stringify({ name: newKeyName })
-        // });
+        setIsCreatingKey(true);
+        setError('');
 
-        // Simulate API call
-        await new Promise(resolve => setTimeout(resolve, 1000));
+        try {
+            const supabase = await createClient();
+            const { data: { session } } = await supabase.auth.getSession();
 
-        const newKey: ApiKey = {
-            id: Date.now().toString(),
-            name: newKeyName,
-            key: `sk_live_${Math.random().toString(36).substring(2, 15)}...`,
-            created: new Date().toISOString().split('T')[0],
-            lastUsed: 'Never',
-            scopes: ['read', 'write']
-        };
+            if (!session?.access_token) {
+                throw new Error('Not authenticated');
+            }
 
-        setApiKeys([...apiKeys, newKey]);
-        setNewKeyName('');
-        setShowCreateKeyModal(false);
-        setIsLoading(false);
+            const response = await createGatewayKey(
+                session.access_token,
+                currentProjectId,
+                { name: newKeyName }
+            );
+
+            if (response.key) {
+                // Store the full key (only shown once)
+                setNewKeyData({
+                    key: response.key.key,
+                    name: response.key.name
+                });
+
+                // Add key to list with prefix only
+                setApiKeys([...apiKeys, response.key]);
+                setNewKeyName('');
+                setShowCreateKeyModal(false);
+            }
+        } catch (err) {
+            console.error('Failed to create API key:', err);
+            setError('Failed to create API key. Please try again.');
+        } finally {
+            setIsCreatingKey(false);
+        }
     };
 
     const revokeApiKey = async (keyId: string) => {
         if (!confirm('Are you sure you want to revoke this API key?')) return;
+        if (!currentProjectId) return;
 
-        setApiKeys(apiKeys.filter(k => k.id !== keyId));
-        // API call to revoke API key
-        // await fetch(`/api/management/user/api-keys/${keyId}`, { method: 'DELETE' });
-    };
+        try {
+            const supabase = await createClient();
+            const { data: { session } } = await supabase.auth.getSession();
 
-    const rotateApiKey = async (keyId: string) => {
-        if (!confirm('This will invalidate the current key and generate a new one. Continue?')) return;
+            if (!session?.access_token) {
+                throw new Error('Not authenticated');
+            }
 
-        setIsLoading(true);
-        // API call to rotate API key
-        // await fetch(`/api/management/user/api-keys/${keyId}/rotate`, { method: 'POST' });
-
-        // Simulate API call
-        await new Promise(resolve => setTimeout(resolve, 1000));
-
-        setApiKeys(apiKeys.map(k =>
-            k.id === keyId
-                ? { ...k, key: `sk_live_${Math.random().toString(36).substring(2, 15)}...` }
-                : k
-        ));
-        setIsLoading(false);
+            await deleteGatewayKey(session.access_token, currentProjectId, keyId);
+            setApiKeys(apiKeys.filter(k => k.id !== keyId));
+        } catch (err) {
+            console.error('Failed to revoke API key:', err);
+            setError('Failed to revoke API key. Please try again.');
+        }
     };
 
     const copyToClipboard = (text: string) => {
@@ -182,8 +220,74 @@ export function SecuritySection() {
         }
     };
 
+    const formatDate = (dateString: string | null) => {
+        if (!dateString) return 'Never';
+        return new Date(dateString).toLocaleDateString();
+    };
+
+    const formatLastUsed = (dateString: string | null) => {
+        if (!dateString) return 'Never';
+        const date = new Date(dateString);
+        const now = new Date();
+        const diffMs = now.getTime() - date.getTime();
+        const diffMins = Math.floor(diffMs / 60000);
+        const diffHours = Math.floor(diffMins / 60);
+        const diffDays = Math.floor(diffHours / 24);
+
+        if (diffMins < 1) return 'Just now';
+        if (diffMins < 60) return `${diffMins} minutes ago`;
+        if (diffHours < 24) return `${diffHours} hours ago`;
+        return `${diffDays} days ago`;
+    };
+
     return (
         <div className="space-y-6">
+            {/* New Key Success Modal */}
+            {newKeyData && (
+                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+                    <div
+                        className="absolute inset-0 bg-background/80 backdrop-blur-sm"
+                        onClick={() => setNewKeyData(null)}
+                    />
+                    <div className="glass-card w-full max-w-lg relative z-10 animate-fade-in shadow-2xl border-accent-blue/20 p-6 space-y-4">
+                        <div className="flex items-start gap-3">
+                            <div className="p-2 bg-accent-blue/10 rounded-lg">
+                                <AlertCircle className="w-5 h-5 text-accent-blue" />
+                            </div>
+                            <div className="flex-1">
+                                <h3 className="text-lg font-bold">Save Your API Key</h3>
+                                <p className="text-sm text-muted mt-1">
+                                    This key will only be shown once. Copy it now and store it securely.
+                                </p>
+                            </div>
+                        </div>
+
+                        <div className="p-3 bg-glass-bg border border-accent-blue/30 rounded-lg">
+                            <p className="text-xs text-muted mb-2">Key Name: {newKeyData.name}</p>
+                            <div className="flex items-center gap-2">
+                                <code className="flex-1 px-3 py-2 bg-background border border-glass-border rounded text-sm font-mono break-all">
+                                    {newKeyData.key}
+                                </code>
+                                <Button
+                                    size="sm"
+                                    variant="secondary"
+                                    icon={<Eye className="w-4 h-4" />}
+                                    onClick={() => copyToClipboard(newKeyData.key)}
+                                >
+                                    Copy
+                                </Button>
+                            </div>
+                        </div>
+
+                        <div className="flex justify-end pt-4 border-t border-glass-border">
+                            <Button onClick={() => setNewKeyData(null)}>
+                                I've Saved My Key
+                            </Button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
             <SettingsSection
                 title="Active Sessions"
                 description="Manage your active sessions across devices"
@@ -284,41 +388,56 @@ export function SecuritySection() {
                 description="Manage your API keys for programmatic access"
                 icon={<Key className="w-5 h-5 text-accent-blue" />}
             >
+                {error && (
+                    <div className="p-3 bg-red-500/10 border border-red-500/20 rounded-lg mb-4">
+                        <p className="text-sm text-red-500">{error}</p>
+                    </div>
+                )}
+
                 <div className="space-y-4">
                     <Button
                         variant="secondary"
                         size="sm"
                         icon={<Plus className="w-4 h-4" />}
                         onClick={() => setShowCreateKeyModal(true)}
+                        disabled={!currentProjectId}
                     >
                         Create New API Key
                     </Button>
 
-                    {apiKeys.map((key) => (
-                        <div
-                            key={key.id}
-                            className="p-4 bg-glass-bg border border-glass-border rounded-xl space-y-3"
-                        >
-                            <div className="flex items-start justify-between">
-                                <div>
-                                    <h4 className="font-bold">{key.name}</h4>
-                                    <p className="text-sm text-muted">
-                                        Created: {new Date(key.created).toLocaleDateString()}
-                                    </p>
-                                    <p className="text-xs text-muted">
-                                        Last used: {key.lastUsed}
-                                    </p>
+                    {isLoadingKeys ? (
+                        <div className="space-y-3">
+                            {[1, 2].map((i) => (
+                                <div
+                                    key={i}
+                                    className="p-4 bg-glass-bg border border-glass-border rounded-xl animate-pulse"
+                                >
+                                    <div className="h-4 bg-glass-border rounded w-1/3 mb-2"></div>
+                                    <div className="h-3 bg-glass-border rounded w-1/4"></div>
                                 </div>
-                                <div className="flex gap-2">
-                                    <Button
-                                        size="sm"
-                                        variant="ghost"
-                                        icon={<RefreshCw className="w-3 h-3" />}
-                                        onClick={() => rotateApiKey(key.id)}
-                                        disabled={isLoading}
-                                    >
-                                        Rotate
-                                    </Button>
+                            ))}
+                        </div>
+                    ) : apiKeys.length === 0 ? (
+                        <div className="p-8 text-center border border-dashed border-glass-border rounded-xl">
+                            <Key className="w-12 h-12 text-muted mx-auto mb-3" />
+                            <p className="text-muted">No API keys yet. Create your first key to get started.</p>
+                        </div>
+                    ) : (
+                        apiKeys.map((key) => (
+                            <div
+                                key={key.id}
+                                className="p-4 bg-glass-bg border border-glass-border rounded-xl space-y-3"
+                            >
+                                <div className="flex items-start justify-between">
+                                    <div>
+                                        <h4 className="font-bold">{key.name}</h4>
+                                        <p className="text-sm text-muted">
+                                            Created: {formatDate(key.created_at)}
+                                        </p>
+                                        <p className="text-xs text-muted">
+                                            Last used: {formatLastUsed(key.last_used)}
+                                        </p>
+                                    </div>
                                     <Button
                                         size="sm"
                                         variant="ghost"
@@ -328,34 +447,24 @@ export function SecuritySection() {
                                         Revoke
                                     </Button>
                                 </div>
-                            </div>
 
-                            <div className="flex items-center gap-2">
-                                <code className="flex-1 px-3 py-2 bg-glass-bg border border-glass-border rounded-lg text-sm font-mono">
-                                    {key.key}
-                                </code>
-                                <Button
-                                    size="sm"
-                                    variant="ghost"
-                                    icon={<Eye className="w-3 h-3" />}
-                                    onClick={() => copyToClipboard(key.key)}
-                                >
-                                    Copy
-                                </Button>
-                            </div>
-
-                            <div className="flex flex-wrap gap-2">
-                                {key.scopes.map((scope) => (
-                                    <span
-                                        key={scope}
-                                        className="px-2 py-1 text-xs font-medium bg-accent-blue/10 text-accent-blue rounded-full"
+                                <div className="flex items-center gap-2">
+                                    <code className="flex-1 px-3 py-2 bg-glass-bg border border-glass-border rounded-lg text-sm font-mono">
+                                        {key.prefix}
+                                    </code>
+                                    <Button
+                                        size="sm"
+                                        variant="ghost"
+                                        icon={<Eye className="w-3 h-3" />}
+                                        onClick={() => copyToClipboard(key.prefix)}
+                                        title="Copy prefix"
                                     >
-                                        {scope}
-                                    </span>
-                                ))}
+                                        Copy
+                                    </Button>
+                                </div>
                             </div>
-                        </div>
-                    ))}
+                        ))
+                    )}
                 </div>
 
                 {/* Create API Key Modal */}
@@ -382,7 +491,7 @@ export function SecuritySection() {
                                     Cancel
                                 </Button>
                                 <Button
-                                    isLoading={isLoading}
+                                    isLoading={isCreatingKey}
                                     onClick={createApiKey}
                                     disabled={!newKeyName.trim()}
                                 >
@@ -425,6 +534,8 @@ export function SecuritySection() {
                         Load More Activity
                     </Button>
                 </div>
+
+                {/* TODO: Fetch from /api/management/user/audit-logs when backend is ready */}
             </SettingsSection>
         </div>
     );

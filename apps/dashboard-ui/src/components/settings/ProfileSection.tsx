@@ -1,17 +1,14 @@
 'use client';
 
-import React, { useState } from 'react';
-import { User, Camera, Mail, Building, MapPin, Save } from 'lucide-react';
-import { SettingsSection, TextInput, TextArea, Select, Button } from './index';
+import React, { useState, useEffect } from 'react';
+import { User, Mail, Save } from 'lucide-react';
+import { SettingsSection, TextInput, Button } from './index';
+import { getUserProfile, updateUserProfile, changePassword } from '@/lib/user-api';
+import { createClient } from '@/utils/supabase/client';
 
 interface ProfileData {
     displayName: string;
     email: string;
-    company: string;
-    location: string;
-    bio: string;
-    timezone: string;
-    language: string;
 }
 
 interface PasswordData {
@@ -23,45 +20,44 @@ interface PasswordData {
 export function ProfileSection() {
     const [profile, setProfile] = useState<ProfileData>({
         displayName: '',
-        email: '',
-        company: '',
-        location: '',
-        bio: '',
-        timezone: 'UTC',
-        language: 'en'
+        email: ''
     });
-
     const [password, setPassword] = useState<PasswordData>({
         currentPassword: '',
         newPassword: '',
         confirmPassword: ''
     });
-
     const [isLoading, setIsLoading] = useState(false);
+    const [isInitialLoading, setIsInitialLoading] = useState(true);
     const [successMessage, setSuccessMessage] = useState('');
     const [errors, setErrors] = useState<Record<string, string>>({});
+    const supabase = createClient();
 
-    const timezones = [
-        { value: 'UTC', label: 'UTC (Coordinated Universal Time)' },
-        { value: 'America/New_York', label: 'Eastern Time (US & Canada)' },
-        { value: 'America/Chicago', label: 'Central Time (US & Canada)' },
-        { value: 'America/Denver', label: 'Mountain Time (US & Canada)' },
-        { value: 'America/Los_Angeles', label: 'Pacific Time (US & Canada)' },
-        { value: 'Europe/London', label: 'London (GMT)' },
-        { value: 'Europe/Paris', label: 'Central European Time' },
-        { value: 'Asia/Tokyo', label: 'Japan Standard Time' },
-        { value: 'Asia/Shanghai', label: 'China Standard Time' },
-        { value: 'Australia/Sydney', label: 'Australian Eastern Time' }
-    ];
+    // Fetch profile on mount
+    useEffect(() => {
+        const fetchProfile = async () => {
+            try {
+                const { data: { session } } = await supabase.auth.getSession();
+                if (!session?.access_token) {
+                    setErrors({ form: 'Not authenticated' });
+                    return;
+                }
 
-    const languages = [
-        { value: 'en', label: 'English' },
-        { value: 'es', label: 'Spanish' },
-        { value: 'fr', label: 'French' },
-        { value: 'de', label: 'German' },
-        { value: 'zh', label: 'Chinese' },
-        { value: 'ja', label: 'Japanese' }
-    ];
+                const data = await getUserProfile(session.access_token);
+                setProfile({
+                    displayName: data.full_name || '',
+                    email: data.email || ''
+                });
+            } catch (error) {
+                console.error('Failed to fetch profile:', error);
+                setErrors({ form: 'Failed to load profile' });
+            } finally {
+                setIsInitialLoading(false);
+            }
+        };
+
+        fetchProfile();
+    }, []);
 
     const handleProfileSave = async () => {
         setIsLoading(true);
@@ -73,11 +69,6 @@ export function ProfileSection() {
         if (!profile.displayName.trim()) {
             newErrors.displayName = 'Display name is required';
         }
-        if (!profile.email.trim()) {
-            newErrors.email = 'Email is required';
-        } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(profile.email)) {
-            newErrors.email = 'Invalid email format';
-        }
 
         if (Object.keys(newErrors).length > 0) {
             setErrors(newErrors);
@@ -86,18 +77,20 @@ export function ProfileSection() {
         }
 
         try {
-            // API call to save profile
-            // await fetch('/api/management/user/profile', {
-            //     method: 'PUT',
-            //     body: JSON.stringify(profile)
-            // });
+            const { data: { session } } = await supabase.auth.getSession();
+            if (!session?.access_token) {
+                setErrors({ form: 'Not authenticated' });
+                return;
+            }
 
-            // Simulate API call
-            await new Promise(resolve => setTimeout(resolve, 1000));
+            await updateUserProfile(session.access_token, {
+                full_name: profile.displayName
+            });
 
             setSuccessMessage('Profile updated successfully');
             setTimeout(() => setSuccessMessage(''), 3000);
         } catch (error) {
+            console.error('Failed to update profile:', error);
             setErrors({ form: 'Failed to update profile' });
         } finally {
             setIsLoading(false);
@@ -130,17 +123,13 @@ export function ProfileSection() {
         }
 
         try {
-            // API call to change password
-            // await fetch('/api/management/user/password', {
-            //     method: 'PUT',
-            //     body: JSON.stringify({
-            //         currentPassword: password.currentPassword,
-            //         newPassword: password.newPassword
-            //     })
-            // });
+            const { data: { session } } = await supabase.auth.getSession();
+            if (!session?.access_token) {
+                setErrors({ form: 'Not authenticated' });
+                return;
+            }
 
-            // Simulate API call
-            await new Promise(resolve => setTimeout(resolve, 1000));
+            await changePassword(session.access_token, password.currentPassword, password.newPassword);
 
             setSuccessMessage('Password changed successfully');
             setPassword({
@@ -150,6 +139,7 @@ export function ProfileSection() {
             });
             setTimeout(() => setSuccessMessage(''), 3000);
         } catch (error) {
+            console.error('Failed to change password:', error);
             setErrors({ form: 'Failed to change password' });
         } finally {
             setIsLoading(false);
@@ -170,30 +160,17 @@ export function ProfileSection() {
                 </div>
             )}
 
-            <SettingsSection
-                title="Profile Information"
-                description="Update your personal information and preferences"
-                icon={<User className="w-5 h-5 text-accent-blue" />}
-            >
-                <div className="space-y-6">
-                    {/* Avatar Section */}
-                    <div className="flex items-center gap-6">
-                        <div className="relative">
-                            <div className="w-20 h-20 rounded-full bg-gradient-to-br from-accent-blue to-accent-violet flex items-center justify-center text-2xl font-bold">
-                                {profile.displayName.charAt(0).toUpperCase() || 'U'}
-                            </div>
-                            <button className="absolute -bottom-1 -right-1 p-2 bg-accent-blue rounded-full hover:bg-accent-blue/80 transition-colors">
-                                <Camera className="w-3 h-3 text-white" />
-                            </button>
-                        </div>
-                        <div>
-                            <h4 className="font-bold">Profile Photo</h4>
-                            <p className="text-sm text-muted">JPG, PNG or GIF. Max size 2MB</p>
-                        </div>
-                    </div>
-
-                    {/* Profile Fields */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {isInitialLoading ? (
+                <div className="flex items-center justify-center py-12">
+                    <div className="text-muted">Loading profile...</div>
+                </div>
+            ) : (
+                <SettingsSection
+                    title="Profile Information"
+                    description="Update your personal information"
+                    icon={<User className="w-5 h-5 text-accent-blue" />}
+                >
+                    <div className="space-y-6 max-w-md">
                         <TextInput
                             label="Display Name"
                             value={profile.displayName}
@@ -207,64 +184,25 @@ export function ProfileSection() {
                             label="Email"
                             type="email"
                             value={profile.email}
-                            onChange={(value) => setProfile({ ...profile, email: value })}
+                            onChange={() => {}}
+                            disabled
                             placeholder="your.email@example.com"
-                            error={errors.email}
                             icon={<Mail className="w-4 h-4" />}
-                            required
+                            helperText="Managed by Supabase authentication"
                         />
 
-                        <TextInput
-                            label="Company"
-                            value={profile.company}
-                            onChange={(value) => setProfile({ ...profile, company: value })}
-                            placeholder="Your company name"
-                            icon={<Building className="w-4 h-4" />}
-                        />
-
-                        <TextInput
-                            label="Location"
-                            value={profile.location}
-                            onChange={(value) => setProfile({ ...profile, location: value })}
-                            placeholder="City, Country"
-                            icon={<MapPin className="w-4 h-4" />}
-                        />
-
-                        <Select
-                            label="Timezone"
-                            value={profile.timezone}
-                            onChange={(value) => setProfile({ ...profile, timezone: value })}
-                            options={timezones}
-                        />
-
-                        <Select
-                            label="Language"
-                            value={profile.language}
-                            onChange={(value) => setProfile({ ...profile, language: value })}
-                            options={languages}
-                        />
+                        <div className="flex justify-end pt-4 border-t border-glass-border">
+                            <Button
+                                isLoading={isLoading}
+                                icon={<Save className="w-4 h-4" />}
+                                onClick={handleProfileSave}
+                            >
+                                Save Profile
+                            </Button>
+                        </div>
                     </div>
-
-                    <TextArea
-                        label="Bio"
-                        value={profile.bio}
-                        onChange={(value) => setProfile({ ...profile, bio: value })}
-                        placeholder="Tell us a little about yourself"
-                        maxLength={500}
-                        rows={3}
-                    />
-
-                    <div className="flex justify-end pt-4 border-t border-glass-border">
-                        <Button
-                            isLoading={isLoading}
-                            icon={<Save className="w-4 h-4" />}
-                            onClick={handleProfileSave}
-                        >
-                            Save Profile
-                        </Button>
-                    </div>
-                </div>
-            </SettingsSection>
+                </SettingsSection>
+            )}
 
             <SettingsSection
                 title="Change Password"

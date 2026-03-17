@@ -1,24 +1,16 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Bell, Mail, AlertTriangle, CheckCircle } from 'lucide-react';
 import { SettingsSection, Toggle, Button } from './index';
+import { getNotificationPreferences, updateNotificationPreferences } from '@/lib/user-api';
+import { createClient } from '@/utils/supabase/client';
 
 interface NotificationPreferences {
     emailNotifications: boolean;
     securityAlerts: boolean;
     usageAlerts: boolean;
-    weeklyReport: boolean;
-    marketingEmails: boolean;
-    productUpdates: boolean;
     usageThreshold: number;
-    notificationCategories: {
-        apiErrors: boolean;
-        rateLimits: boolean;
-        billing: boolean;
-        security: boolean;
-        maintenance: boolean;
-    };
 }
 
 export function NotificationsSection() {
@@ -26,40 +18,57 @@ export function NotificationsSection() {
         emailNotifications: true,
         securityAlerts: true,
         usageAlerts: true,
-        weeklyReport: false,
-        marketingEmails: false,
-        productUpdates: true,
-        usageThreshold: 80,
-        notificationCategories: {
-            apiErrors: true,
-            rateLimits: true,
-            billing: true,
-            security: true,
-            maintenance: false
-        }
+        usageThreshold: 80
     });
-
     const [isLoading, setIsLoading] = useState(false);
+    const [isInitialLoading, setIsInitialLoading] = useState(true);
     const [successMessage, setSuccessMessage] = useState('');
+    const [errors, setErrors] = useState<Record<string, string>>({});
+    const supabase = createClient();
+
+    useEffect(() => {
+        const fetchPreferences = async () => {
+            try {
+                const { data: { session } } = await supabase.auth.getSession();
+                if (!session?.access_token) {
+                    setErrors({ form: 'Not authenticated' });
+                    return;
+                }
+                const data = await getNotificationPreferences(session.access_token);
+                setPreferences({
+                    emailNotifications: data.emailNotifications ?? true,
+                    securityAlerts: data.securityAlerts ?? true,
+                    usageAlerts: data.usageAlerts ?? true,
+                    usageThreshold: data.usageThreshold ?? 80
+                });
+            } catch (error) {
+                console.error('Failed to load preferences:', error);
+                setErrors({ form: 'Failed to load notification preferences' });
+            } finally {
+                setIsInitialLoading(false);
+            }
+        };
+        fetchPreferences();
+    }, [supabase]);
 
     const handleSave = async () => {
         setIsLoading(true);
         setSuccessMessage('');
+        setErrors({});
 
         try {
-            // API call to save notification preferences
-            // await fetch('/api/management/user/notifications', {
-            //     method: 'PUT',
-            //     body: JSON.stringify(preferences)
-            // });
+            const { data: { session } } = await supabase.auth.getSession();
+            if (!session?.access_token) {
+                setErrors({ form: 'Not authenticated' });
+                return;
+            }
 
-            // Simulate API call
-            await new Promise(resolve => setTimeout(resolve, 1000));
-
+            await updateNotificationPreferences(session.access_token, preferences);
             setSuccessMessage('Notification preferences updated successfully');
             setTimeout(() => setSuccessMessage(''), 3000);
         } catch (error) {
             console.error('Failed to save preferences:', error);
+            setErrors({ form: 'Failed to save notification preferences' });
         } finally {
             setIsLoading(false);
         }
@@ -72,18 +81,19 @@ export function NotificationsSection() {
         setPreferences({ ...preferences, [key]: value });
     };
 
-    const updateCategory = (category: keyof NotificationPreferences['notificationCategories']) => {
-        setPreferences({
-            ...preferences,
-            notificationCategories: {
-                ...preferences.notificationCategories,
-                [category]: !preferences.notificationCategories[category]
-            }
-        });
-    };
+    if (isInitialLoading) return (
+        <div className="flex items-center justify-center py-12">
+            <div className="text-muted">Loading notification preferences...</div>
+        </div>
+    );
 
     return (
         <div className="space-y-6">
+            {errors.form && (
+                <div className="bg-red-500/10 border border-red-500/30 text-red-500 px-4 py-3 rounded-xl text-sm font-medium">
+                    {errors.form}
+                </div>
+            )}
             {successMessage && (
                 <div className="bg-green-500/10 border border-green-500/30 text-green-500 px-4 py-3 rounded-xl text-sm font-medium flex items-center gap-2">
                     <CheckCircle className="w-4 h-4" />
@@ -128,33 +138,6 @@ export function NotificationsSection() {
                             description="Receive alerts when approaching usage limits"
                             checked={preferences.usageAlerts}
                             onChange={(checked) => updatePreference('usageAlerts', checked)}
-                            disabled={!preferences.emailNotifications}
-                        />
-
-                        <NotificationItem
-                            icon={<Mail className="w-4 h-4 text-accent-violet" />}
-                            title="Weekly Report"
-                            description="Receive a weekly summary of your API usage and costs"
-                            checked={preferences.weeklyReport}
-                            onChange={(checked) => updatePreference('weeklyReport', checked)}
-                            disabled={!preferences.emailNotifications}
-                        />
-
-                        <NotificationItem
-                            icon={<CheckCircle className="w-4 h-4 text-green-500" />}
-                            title="Product Updates"
-                            description="Stay informed about new features and improvements"
-                            checked={preferences.productUpdates}
-                            onChange={(checked) => updatePreference('productUpdates', checked)}
-                            disabled={!preferences.emailNotifications}
-                        />
-
-                        <NotificationItem
-                            icon={<Bell className="w-4 h-4 text-muted" />}
-                            title="Marketing Emails"
-                            description="Receive promotional content and offers"
-                            checked={preferences.marketingEmails}
-                            onChange={(checked) => updatePreference('marketingEmails', checked)}
                             disabled={!preferences.emailNotifications}
                         />
                     </div>
@@ -207,49 +190,6 @@ export function NotificationsSection() {
                 </div>
             </SettingsSection>
 
-            <SettingsSection
-                title="Notification Categories"
-                description="Select specific categories to monitor"
-                icon={<Bell className="w-5 h-5 text-accent-blue" />}
-            >
-                <div className="space-y-4">
-                    <CategoryItem
-                        title="API Errors"
-                        description="Get notified when API error rate exceeds threshold"
-                        checked={preferences.notificationCategories.apiErrors}
-                        onChange={() => updateCategory('apiErrors')}
-                    />
-
-                    <CategoryItem
-                        title="Rate Limits"
-                        description="Alert when approaching rate limits"
-                        checked={preferences.notificationCategories.rateLimits}
-                        onChange={() => updateCategory('rateLimits')}
-                    />
-
-                    <CategoryItem
-                        title="Billing"
-                        description="Notifications about billing and payments"
-                        checked={preferences.notificationCategories.billing}
-                        onChange={() => updateCategory('billing')}
-                    />
-
-                    <CategoryItem
-                        title="Security"
-                        description="Security-related notifications"
-                        checked={preferences.notificationCategories.security}
-                        onChange={() => updateCategory('security')}
-                    />
-
-                    <CategoryItem
-                        title="Maintenance"
-                        description="Scheduled maintenance and updates"
-                        checked={preferences.notificationCategories.maintenance}
-                        onChange={() => updateCategory('maintenance')}
-                    />
-                </div>
-            </SettingsSection>
-
             <div className="flex justify-end">
                 <Button
                     isLoading={isLoading}
@@ -289,28 +229,6 @@ function NotificationItem({ icon, title, description, checked, onChange, disable
                 checked={checked}
                 onChange={onChange}
                 disabled={disabled}
-            />
-        </div>
-    );
-}
-
-interface CategoryItemProps {
-    title: string;
-    description: string;
-    checked: boolean;
-    onChange: () => void;
-}
-
-function CategoryItem({ title, description, checked, onChange }: CategoryItemProps) {
-    return (
-        <div className="flex items-center justify-between p-4 bg-glass-bg border border-glass-border rounded-xl hover:border-accent-blue/30 transition-colors">
-            <div>
-                <h4 className="font-bold">{title}</h4>
-                <p className="text-sm text-muted mt-1">{description}</p>
-            </div>
-            <Toggle
-                checked={checked}
-                onChange={onChange}
             />
         </div>
     );

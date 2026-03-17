@@ -1,20 +1,20 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Settings, Save, Shield, CreditCard, Bell, User, AlertTriangle } from 'lucide-react';
+import { Settings, Shield, TrendingUp, Bell, User } from 'lucide-react';
 import { ProfileSection } from '@/components/settings/ProfileSection';
-import { BillingSection } from '@/components/settings/BillingSection';
+import { UsageSection } from '@/components/settings/UsageSection';
 import { SecuritySection } from '@/components/settings/SecuritySection';
 import { NotificationsSection } from '@/components/settings/NotificationsSection';
 
-type TabType = 'profile' | 'billing' | 'security' | 'notifications';
+type TabType = 'profile' | 'usage' | 'security' | 'notifications';
 
 export default function SettingsPage() {
     const [activeTab, setActiveTab] = useState<TabType>('profile');
 
     const tabs = [
         { id: 'profile' as TabType, name: 'Profile', icon: User },
-        { id: 'billing' as TabType, name: 'Billing & Usage', icon: CreditCard },
+        { id: 'usage' as TabType, name: 'Usage', icon: TrendingUp },
         { id: 'security' as TabType, name: 'Security', icon: Shield },
         { id: 'notifications' as TabType, name: 'Notifications', icon: Bell },
     ];
@@ -23,7 +23,7 @@ export default function SettingsPage() {
         <div className="max-w-6xl space-y-8 animate-fade-in">
             <div>
                 <h1 className="text-3xl font-bold font-heading tracking-tight">Account <span className="text-gradient">Settings</span></h1>
-                <p className="text-muted mt-1">Manage your global preferences, billing, and security settings.</p>
+                <p className="text-muted mt-1">Manage your profile, usage analytics, and security settings.</p>
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
@@ -54,28 +54,9 @@ export default function SettingsPage() {
                 {/* Main content area */}
                 <div className="lg:col-span-3">
                     {activeTab === 'profile' && <ProfileSection />}
-                    {activeTab === 'billing' && <BillingSection />}
+                    {activeTab === 'usage' && <UsageSection />}
                     {activeTab === 'security' && <SecuritySection />}
                     {activeTab === 'notifications' && <NotificationsSection />}
-
-                    {/* Danger Zone - shown on all tabs */}
-                    <div className="glass-card p-6 border-red-500/20 bg-red-500/5 mt-8">
-                        <h3 className="text-lg font-bold text-red-500 mb-4 flex items-center gap-2">
-                            <AlertTriangle className="w-5 h-5" />
-                            Danger Zone
-                        </h3>
-                        <p className="text-sm text-muted mb-6">
-                            Once you delete your account, there is no going back. Please be certain.
-                        </p>
-                        <div className="flex flex-wrap gap-4">
-                            <button className="px-4 py-2 border border-red-500/30 text-red-500 rounded-xl text-sm font-bold hover:bg-red-500/10 transition-all">
-                                Delete Account
-                            </button>
-                            <button className="px-4 py-2 border border-glass-border text-muted rounded-xl text-sm font-bold hover:bg-glass-bg transition-all">
-                                Export Data
-                            </button>
-                        </div>
-                    </div>
                 </div>
             </div>
         </div>
