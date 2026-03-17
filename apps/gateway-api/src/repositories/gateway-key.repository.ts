@@ -71,8 +71,8 @@ export class GatewayKeyRepository {
     rateLimitPerDay: number;
   }): Promise<void> {
     await this.db.run(
-      `INSERT INTO gateway_keys (id, project_id, key_hash, key_hint, name, monthly_limit_usd, rate_limit_per_min, rate_limit_per_day)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+      `INSERT INTO gateway_keys (id, project_id, key_hash, key_hint, name, status, monthly_limit_usd, rate_limit_per_min, rate_limit_per_day, created_at)
+       VALUES (?, ?, ?, ?, ?, 'active', ?, ?, ?, CURRENT_TIMESTAMP)`,
       [data.id, data.projectId, data.keyHash, data.keyHint, data.name, data.monthlyLimitUsd, data.rateLimitPerMin, data.rateLimitPerDay]
     );
   }
