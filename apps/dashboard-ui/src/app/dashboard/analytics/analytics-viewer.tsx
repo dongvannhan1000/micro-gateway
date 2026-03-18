@@ -85,8 +85,9 @@ export function AnalyticsViewer({ initialSummary, initialUsage, projects, initia
                     </div>
                 </div>
             ) : (
-                <div className={clsx("space-y-8 transition-opacity duration-300", loading ? "opacity-40 pointer-events-none" : "opacity-100")}>
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-6">
+                <div className={clsx("space-y-6 transition-opacity duration-300", loading ? "opacity-40 pointer-events-none" : "opacity-100")}>
+                    {/* First Row: Requests & Tokens */}
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                         <StatsCard
                             title="Total Requests"
                             value={summary?.totalRequests || 0}
@@ -105,6 +106,10 @@ export function AnalyticsViewer({ initialSummary, initialUsage, projects, initia
                             icon={MessageCircle}
                             color="green"
                         />
+                    </div>
+
+                    {/* Second Row: Cost, Latency, Security */}
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                         <StatsCard
                             title="Total Estimated Cost"
                             value={`$${(summary?.totalCost || 0).toFixed(4)}`}
