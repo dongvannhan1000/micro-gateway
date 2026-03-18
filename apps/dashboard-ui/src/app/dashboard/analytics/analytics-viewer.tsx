@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Activity, DollarSign, Clock, ShieldAlert, BarChart3, ChevronRight } from 'lucide-react';
+import { Activity, DollarSign, Clock, ShieldAlert, BarChart3, ChevronRight, MessageSquare, MessageCircle } from 'lucide-react';
 import { StatsCard } from '@/components/dashboard/stats-card';
 import { UsageChart } from '@/components/dashboard/usage-chart';
 import { getAnalyticsSummary, getUsageData } from '../actions';
@@ -86,29 +86,41 @@ export function AnalyticsViewer({ initialSummary, initialUsage, projects, initia
                 </div>
             ) : (
                 <div className={clsx("space-y-8 transition-opacity duration-300", loading ? "opacity-40 pointer-events-none" : "opacity-100")}>
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                        <StatsCard 
-                            title="Total Requests" 
-                            value={summary?.totalRequests || 0} 
-                            icon={Activity} 
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-6">
+                        <StatsCard
+                            title="Total Requests"
+                            value={summary?.totalRequests || 0}
+                            icon={Activity}
                             color="blue"
                         />
-                        <StatsCard 
-                            title="Total Estimated Cost" 
-                            value={`$${(summary?.totalCost || 0).toFixed(4)}`} 
-                            icon={DollarSign} 
+                        <StatsCard
+                            title="Input Tokens"
+                            value={summary?.totalPromptTokens?.toLocaleString() || 0}
+                            icon={MessageSquare}
+                            color="blue"
+                        />
+                        <StatsCard
+                            title="Output Tokens"
+                            value={summary?.totalCompletionTokens?.toLocaleString() || 0}
+                            icon={MessageCircle}
                             color="green"
                         />
-                        <StatsCard 
-                            title="Avg Latency" 
-                            value={`${Math.round(summary?.avgLatency || 0)}ms`} 
-                            icon={Clock} 
-                            color="purple" 
+                        <StatsCard
+                            title="Total Estimated Cost"
+                            value={`$${(summary?.totalCost || 0).toFixed(4)}`}
+                            icon={DollarSign}
+                            color="green"
                         />
-                        <StatsCard 
-                            title="Security Events" 
-                            value={summary?.securityEvents || 0} 
-                            icon={ShieldAlert} 
+                        <StatsCard
+                            title="Avg Latency"
+                            value={`${Math.round(summary?.avgLatency || 0)}ms`}
+                            icon={Clock}
+                            color="purple"
+                        />
+                        <StatsCard
+                            title="Security Events"
+                            value={summary?.securityEvents || 0}
+                            icon={ShieldAlert}
                             color="red"
                         />
                     </div>

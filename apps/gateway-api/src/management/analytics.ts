@@ -19,6 +19,9 @@ analytics.get('/summary', async (c) => {
             totalRequests: stats.total_requests || 0,
             totalCost: stats.total_cost || 0,
             avgLatency: stats.avg_latency || 0,
+            totalPromptTokens: stats.total_prompt_tokens || 0,
+            totalCompletionTokens: stats.total_completion_tokens || 0,
+            totalTokens: stats.total_tokens || 0,
             securityEvents: stats.security_events || 0
         });
     } catch (err: any) {

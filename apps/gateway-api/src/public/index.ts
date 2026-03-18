@@ -91,4 +91,20 @@ publicAPI.post('/waitlist', async (c) => {
     }
 });
 
+// --- Health Check ---
+
+/**
+ * GET /api/health
+ * Health check endpoint that returns the service status and version.
+ * This endpoint is publicly accessible (no authentication required) and can be used
+ * by monitoring systems, load balancers, or the dashboard UI to verify gateway availability.
+ * Returns a simple JSON response with status and version information.
+ */
+publicAPI.get('/health', (c) => {
+    return c.json({
+        status: 'healthy',
+        version: '1.0.0'
+    });
+});
+
 export { publicAPI as publicAPIRouter };

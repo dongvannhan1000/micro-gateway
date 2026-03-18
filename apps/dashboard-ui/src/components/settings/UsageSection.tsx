@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { TrendingUp, DollarSign, Activity } from 'lucide-react';
+import { TrendingUp, DollarSign, Activity, MessageSquare, MessageCircle } from 'lucide-react';
 import { SettingsSection } from './index';
 import { createClient } from '@/utils/supabase/client';
 import { getUserUsage, getUserQuotas } from '@/lib/user-api';
@@ -9,6 +9,8 @@ import { getUserUsage, getUserQuotas } from '@/lib/user-api';
 interface UsageMetrics {
     total_requests: number;
     total_cost_usd: number;
+    total_prompt_tokens: number;
+    total_completion_tokens: number;
     total_tokens: number;
 }
 
@@ -29,6 +31,8 @@ interface UsageData { date: string; cost: number; }
 const MOCK_METRICS: UsageMetrics = {
     total_requests: 125430,
     total_cost_usd: 33.42,
+    total_prompt_tokens: 52345000,
+    total_completion_tokens: 37197000,
     total_tokens: 89542000
 };
 
@@ -55,7 +59,7 @@ const MOCK_DAILY_DATA: UsageData[] = [
 export function UsageSection() {
     const [timeRange, setTimeRange] = useState<'week' | 'month' | 'year'>('month');
     const [isLoading, setIsLoading] = useState(true);
-    const [metrics, setMetrics] = useState<UsageMetrics>({ total_requests: 0, total_cost_usd: 0, total_tokens: 0 });
+    const [metrics, setMetrics] = useState<UsageMetrics>({ total_requests: 0, total_cost_usd: 0, total_prompt_tokens: 0, total_completion_tokens: 0, total_tokens: 0 });
     const [quotas, setQuotas] = useState<QuotaData | null>(null);
     const [usageData, setUsageData] = useState<UsageData[]>([]);
     const [error, setError] = useState<string | null>(null);
@@ -77,6 +81,8 @@ export function UsageSection() {
                         const realMetrics = {
                             total_requests: data.summary.total_requests || 0,
                             total_cost_usd: data.summary.total_cost_usd || 0,
+                            total_prompt_tokens: data.summary.total_prompt_tokens || 0,
+                            total_completion_tokens: data.summary.total_completion_tokens || 0,
                             total_tokens: data.summary.total_tokens || 0
                         };
                         console.log('[Usage] Real metrics from API:', realMetrics);
@@ -251,16 +257,18 @@ export function UsageSection() {
         metrics,
         quotas: quotas ? 'exists' : 'null',
         error,
-        hasNoData: !metrics || (metrics.total_requests === 0 && metrics.total_cost_usd === 0 && metrics.total_tokens === 0),
-        willShowEmptyState: !metrics || (!isUsingMockData && metrics.total_requests === 0 && metrics.total_cost_usd === 0 && metrics.total_tokens === 0)
+        hasNoData: !metrics || (metrics.total_requests === 0 && metrics.total_cost_usd === 0 && metrics.total_prompt_tokens === 0 && metrics.total_completion_tokens === 0 && metrics.total_tokens === 0),
+        willShowEmptyState: !metrics || (!isUsingMockData && metrics.total_requests === 0 && metrics.total_cost_usd === 0 && metrics.total_prompt_tokens === 0 && metrics.total_completion_tokens === 0 && metrics.total_tokens === 0)
     });
 
     console.log('[Usage] Checking render condition:', {
         metrics: metrics,
         isUsingMockData: isUsingMockData,
-        condition: !metrics || (!isUsingMockData && metrics.total_requests === 0 && metrics.total_cost_usd === 0 && metrics.total_tokens === 0),
+        condition: !metrics || (!isUsingMockData && metrics.total_requests === 0 && metrics.total_cost_usd === 0 && metrics.total_prompt_tokens === 0 && metrics.total_completion_tokens === 0 && metrics.total_tokens === 0),
         total_requests: metrics?.total_requests,
         total_cost_usd: metrics?.total_cost_usd,
+        total_prompt_tokens: metrics?.total_prompt_tokens,
+        total_completion_tokens: metrics?.total_completion_tokens,
         total_tokens: metrics?.total_tokens
     });
 
@@ -284,7 +292,7 @@ export function UsageSection() {
                             🎭 Showing demo data (API returned null/error - make API calls to see real metrics)
                         </div>
                     )}
-                    {(!metrics || (!isUsingMockData && metrics.total_requests === 0 && metrics.total_cost_usd === 0 && metrics.total_tokens === 0)) ? (
+                    {(!metrics || (!isUsingMockData && metrics.total_requests === 0 && metrics.total_cost_usd === 0 && metrics.total_prompt_tokens === 0 && metrics.total_completion_tokens === 0 && metrics.total_tokens === 0)) ? (
                         <div className="text-center py-12 text-muted">
                             <Activity className="w-12 h-12 mx-auto mb-4 opacity-50" />
                             <p>No usage data yet</p>
@@ -292,7 +300,7 @@ export function UsageSection() {
                         </div>
                     ) : (
                         <>
-                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                                 <MetricCard
                                     title="API Requests"
                                     value={(metrics.total_requests || 0).toLocaleString()}
@@ -304,10 +312,34 @@ export function UsageSection() {
                                     icon={DollarSign}
                                 />
                                 <MetricCard
-                                    title="Tokens Used"
-                                    value={`${((metrics.total_tokens || 0) / 1000000).toFixed(1)}M`}
-                                    icon={TrendingUp}
+                                    title="Input Tokens"
+                                    value={(metrics.total_prompt_tokens || 0).toLocaleString()}
+                                    icon={MessageSquare}
                                 />
+                                <MetricCard
+                                    title="Output Tokens"
+                                    value={(metrics.total_completion_tokens || 0).toLocaleString()}
+                                    icon={MessageCircle}
+                                />
+                            </div>
+
+                            {/* Token Summary with Percentages */}
+                            <div className="bg-glass-bg border border-glass-border rounded-xl p-4">
+                                <div className="flex items-center justify-between">
+                                    <div className="flex items-center gap-2">
+                                        <TrendingUp className="w-4 h-4 text-accent-violet" />
+                                        <span className="text-sm font-medium">Total Tokens</span>
+                                    </div>
+                                    <div className="text-right">
+                                        <div className="text-lg font-bold">{(metrics.total_tokens || 0).toLocaleString()}</div>
+                                        {metrics.total_tokens > 0 && (
+                                            <div className="text-xs text-muted">
+                                                Input: {Math.round((metrics.total_prompt_tokens / metrics.total_tokens) * 100)}% |
+                                                Output: {Math.round((metrics.total_completion_tokens / metrics.total_tokens) * 100)}%
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
                             </div>
                             {quotas && quotas.limits && (
                                 <div className="bg-glass-bg border border-glass-border rounded-xl p-4 space-y-3">

@@ -46,13 +46,16 @@ export class RequestLogRepository {
 
   async getAnalyticsSummary(projectId: string, userId: string, days: number = 30): Promise<any> {
     return this.db.first(
-      `SELECT 
+      `SELECT
         COUNT(*) as total_requests,
         TOTAL(cost_usd) as total_cost,
         AVG(latency_ms) as avg_latency,
+        TOTAL(prompt_tokens) as total_prompt_tokens,
+        TOTAL(completion_tokens) as total_completion_tokens,
+        TOTAL(total_tokens) as total_tokens,
         COUNT(CASE WHEN prompt_injection_score >= 0.7 OR status_code = 403 THEN 1 END) as security_events
       FROM request_logs
-      WHERE project_id = ? 
+      WHERE project_id = ?
       AND created_at >= date('now', '-${days} days')
       AND project_id IN (SELECT id FROM projects WHERE user_id = ?)`,
       [projectId, userId]
@@ -61,10 +64,13 @@ export class RequestLogRepository {
 
   async getDailyUsage(projectId: string, userId: string, days: number = 14): Promise<any[]> {
     const { results } = await this.db.execute(
-      `SELECT 
+      `SELECT
         date(created_at) as day,
         COUNT(*) as requests,
-        TOTAL(cost_usd) as cost
+        TOTAL(cost_usd) as cost,
+        TOTAL(prompt_tokens) as prompt_tokens,
+        TOTAL(completion_tokens) as completion_tokens,
+        TOTAL(total_tokens) as total_tokens
       FROM request_logs
       WHERE project_id = ?
       AND created_at >= date('now', '-${days} days')

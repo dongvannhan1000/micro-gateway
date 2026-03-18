@@ -398,6 +398,8 @@ export class UsageRepository {
       `SELECT
         COUNT(*) as total_requests,
         SUM(rl.cost_usd) as total_cost_usd,
+        SUM(rl.prompt_tokens) as total_prompt_tokens,
+        SUM(rl.completion_tokens) as total_completion_tokens,
         SUM(rl.total_tokens) as total_tokens,
         AVG(rl.latency_ms) as avg_latency_ms,
         SUM(CASE WHEN rl.status_code >= 200 AND rl.status_code < 300 THEN 1 ELSE 0 END) * 1.0 / NULLIF(COUNT(*), 0) * 100 as success_rate
@@ -439,6 +441,8 @@ export class UsageRepository {
         DATE(rl.created_at) as date,
         COUNT(*) as requests,
         SUM(rl.cost_usd) as cost_usd,
+        SUM(rl.prompt_tokens) as prompt_tokens,
+        SUM(rl.completion_tokens) as completion_tokens,
         SUM(rl.total_tokens) as tokens
        FROM request_logs rl
        JOIN projects p ON rl.project_id = p.id
