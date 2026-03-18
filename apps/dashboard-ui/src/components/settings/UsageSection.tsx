@@ -24,8 +24,6 @@ interface QuotaData {
     usage_warnings: Array<{ type: string; message: string; severity: string }>;
 }
 
-interface UsageData { date: string; cost: number; }
-
 // Mock data for demo purposes
 const MOCK_METRICS: UsageMetrics = {
     total_requests: 125430,
@@ -54,19 +52,11 @@ const MOCK_QUOTAS: QuotaData = {
     ]
 };
 
-const MOCK_DAILY_DATA: UsageData[] = [
-    { date: 'Week 1', cost: 8.50 },
-    { date: 'Week 2', cost: 11.20 },
-    { date: 'Week 3', cost: 7.30 },
-    { date: 'Week 4', cost: 6.42 }
-];
-
 export function UsageSection() {
     const [timeRange, setTimeRange] = useState<'week' | 'month' | 'year'>('month');
     const [isLoading, setIsLoading] = useState(true);
     const [metrics, setMetrics] = useState<UsageMetrics>({ total_requests: 0, total_cost_usd: 0, total_prompt_tokens: 0, total_completion_tokens: 0, total_tokens: 0 });
     const [quotas, setQuotas] = useState<QuotaData | null>(null);
-    const [usageData, setUsageData] = useState<UsageData[]>([]);
     const [error, setError] = useState<string | null>(null);
     const [isUsingMockData, setIsUsingMockData] = useState(false); // Track if currently showing mock
 
@@ -100,24 +90,6 @@ export function UsageSection() {
                         setMetrics(MOCK_METRICS);
                         setIsUsingMockData(true); // Using mock data
                     }
-
-                    if (data && data.daily_breakdown) {
-                        const chartData = Object.entries(data.daily_breakdown).map(([date, value]: [string, any]) => ({
-                            date: new Date(date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
-                            cost: value.total_cost_usd || 0
-                        }));
-                        setUsageData(chartData.slice(-7));
-                        setIsUsingMockData(false); // Using real data
-                    } else if (data && Object.keys(data).length > 0) {
-                        // API returned data but no daily_breakdown (empty array)
-                        setUsageData([]);
-                        setIsUsingMockData(false); // Using real data
-                    } else {
-                        // Only use mock if API returns null/undefined
-                        console.log('[Usage] No daily breakdown from API, using mock');
-                        setUsageData(MOCK_DAILY_DATA);
-                        setIsUsingMockData(true); // Using mock data
-                    }
                 }
             } catch (err: any) {
                 console.error('Failed to load usage:', err);
@@ -132,7 +104,6 @@ export function UsageSection() {
 
                 // Use mock data on error
                 setMetrics(MOCK_METRICS);
-                setUsageData(MOCK_DAILY_DATA);
                 setIsUsingMockData(true); // Using mock data
             } finally {
                 setIsLoading(false);
@@ -184,44 +155,6 @@ export function UsageSection() {
             <div className="text-2xl font-bold">{value}</div>
         </div>
     );
-
-    const UsageChart = () => {
-        if (usageData.length === 0) {
-            return <div className="text-center py-8 text-muted">No usage data available for this period</div>;
-        }
-        const maxCost = Math.max(...usageData.map(d => d.cost), 1);
-        return (
-            <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                    <h4 className="font-bold">Usage Trends</h4>
-                    <div className="flex gap-2">
-                        {(['week', 'month', 'year'] as const).map((range) => (
-                            <button key={range} onClick={() => setTimeRange(range)}
-                                className={`px-3 py-1 text-xs font-medium rounded-lg transition-colors ${
-                                    timeRange === range ? 'bg-accent-blue text-white' : 'bg-glass-bg text-muted hover:text-white'
-                                }`}>
-                                {range.charAt(0).toUpperCase() + range.slice(1)}
-                            </button>
-                        ))}
-                    </div>
-                </div>
-                <div className="space-y-3">
-                    {usageData.map((item, index) => (
-                        <div key={index} className="space-y-1">
-                            <div className="flex justify-between text-xs">
-                                <span className="text-muted">{item.date}</span>
-                                <span className="font-medium">${item.cost.toFixed(2)} USD</span>
-                            </div>
-                            <div className="h-2 bg-glass-bg rounded-full overflow-hidden">
-                                <div className="h-full bg-gradient-to-r from-accent-blue to-accent-violet rounded-full transition-all duration-500"
-                                    style={{ width: `${(item.cost / maxCost) * 100}%` }} />
-                            </div>
-                        </div>
-                    ))}
-                </div>
-            </div>
-        );
-    };
 
     const QuotaProgress = ({ label, used, total, unit }: any) => {
         const percentage = total > 0 ? (used / total) * 100 : 0;
@@ -353,9 +286,6 @@ export function UsageSection() {
                         </>
                     )}
                 </div>
-            </SettingsSection>
-            <SettingsSection title="Usage Analytics" description="Detailed usage trends and patterns" icon={<TrendingUp className="w-5 h-5 text-accent-violet" />}>
-                <UsageChart />
             </SettingsSection>
             {quotas && quotas.limits && (
                 <SettingsSection title="Quota Status" description="Track your resource quotas and limits" icon={<Activity className="w-5 h-5 text-accent-blue" />}>
