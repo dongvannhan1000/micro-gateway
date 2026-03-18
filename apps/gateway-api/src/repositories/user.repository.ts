@@ -381,7 +381,7 @@ export class UsageRepository {
     byModel: any;
     dailyBreakdown: any[];
   }> {
-    const period = options.period ?? 'month';
+    const period = options.period ?? 'month'; // Default to 'month' for billing
     const { startDate, endDate } = this.getDateRange(period);
 
     // Join request_logs with projects to filter by user_id
@@ -460,6 +460,236 @@ export class UsageRepository {
       byProvider,
       byModel: {}, // TODO: Implement model breakdown
       dailyBreakdown
+    };
+  }
+
+  /**
+   * Get usage metrics for the last 30 days (for Usage page)
+   * @deprecated Use getAllTimeMetrics() instead
+   */
+  async getLast30DaysMetrics(userId: string, projectId?: string): Promise<{
+    summary: any;
+    byProvider: any;
+    dailyBreakdown: any[];
+  }> {
+    // Calculate last 30 days
+    const now = new Date();
+    const startDate = new Date(now);
+    startDate.setDate(startDate.getDate() - 30);
+    const startDateStr = startDate.toISOString().split('T')[0];
+    const endDateStr = now.toISOString().split('T')[0];
+
+    // Join request_logs with projects to filter by user_id
+    let whereClause = `WHERE p.user_id = ? AND rl.created_at >= ? AND rl.created_at <= ?`;
+    const params: any[] = [userId, startDateStr, endDateStr];
+
+    if (projectId) {
+      whereClause += ` AND rl.project_id = ?`;
+      params.push(projectId);
+    }
+
+    // Get summary metrics from request_logs
+    const summaryResult = await this.db.first(
+      `SELECT
+        COUNT(*) as total_requests,
+        SUM(rl.cost_usd) as total_cost_usd,
+        SUM(rl.prompt_tokens) as total_prompt_tokens,
+        SUM(rl.completion_tokens) as total_completion_tokens,
+        SUM(rl.total_tokens) as total_tokens,
+        AVG(rl.latency_ms) as avg_latency_ms
+       FROM request_logs rl
+       JOIN projects p ON rl.project_id = p.id
+       ${whereClause}`,
+      params
+    );
+
+    // Get daily breakdown
+    const { results: dailyBreakdown } = await this.db.execute(
+      `SELECT
+        DATE(rl.created_at) as date,
+        COUNT(*) as requests,
+        SUM(rl.cost_usd) as cost_usd
+       FROM request_logs rl
+       JOIN projects p ON rl.project_id = p.id
+       ${whereClause}
+       GROUP BY DATE(rl.created_at)
+       ORDER BY date DESC`,
+      params
+    );
+
+    return {
+      summary: summaryResult || {},
+      byProvider: {},
+      byModel: {},
+      dailyBreakdown
+    };
+  }
+
+  /**
+   * Get ALL TIME usage metrics (from first request to now)
+   */
+  async getAllTimeMetrics(userId: string, projectId?: string): Promise<{
+    summary: any;
+    byProvider: any;
+    dailyBreakdown: any[];
+  }> {
+    // Join request_logs with projects to filter by user_id - NO date filter
+    let whereClause = `WHERE p.user_id = ?`;
+    const params: any[] = [userId];
+
+    if (projectId) {
+      whereClause += ` AND rl.project_id = ?`;
+      params.push(projectId);
+    }
+
+    // Get summary metrics from request_logs
+    const summaryResult = await this.db.first(
+      `SELECT
+        COUNT(*) as total_requests,
+        SUM(rl.cost_usd) as total_cost_usd,
+        SUM(rl.prompt_tokens) as total_prompt_tokens,
+        SUM(rl.completion_tokens) as total_completion_tokens,
+        SUM(rl.total_tokens) as total_tokens,
+        AVG(rl.latency_ms) as avg_latency_ms
+       FROM request_logs rl
+       JOIN projects p ON rl.project_id = p.id
+       ${whereClause}`,
+      params
+    );
+
+    // Get daily breakdown
+    const { results: dailyBreakdown } = await this.db.execute(
+      `SELECT
+        DATE(rl.created_at) as date,
+        COUNT(*) as requests,
+        SUM(rl.cost_usd) as cost_usd
+       FROM request_logs rl
+       JOIN projects p ON rl.project_id = p.id
+       ${whereClause}
+       GROUP BY DATE(rl.created_at)
+       ORDER BY date DESC`,
+      params
+    );
+
+    return {
+      summary: summaryResult || {},
+      byProvider: {},
+      byModel: {},
+      dailyBreakdown
+    };
+  }
+
+  /**
+   * Get user's first request date
+   */
+  async getFirstRequestDate(userId: string): Promise<Date | null> {
+    const result = await this.db.first<{ first_request_date: string }>(
+      `SELECT MIN(rl.created_at) as first_request_date
+       FROM request_logs rl
+       JOIN projects p ON rl.project_id = p.id
+       WHERE p.user_id = ?`,
+      [userId]
+    );
+    return result?.first_request_date ? new Date(result.first_request_date) : null;
+  }
+
+  /**
+   * Get usage metrics for current 30-day billing period
+   *
+   * IMPORTANT: This is a ROLLING 30-DAY period from user's first request (different from Gateway Key calendar month)
+   *
+   * Behavior:
+   * - Period starts from user's first API request date
+   * - Resets every 30 days from that date (personalized per user)
+   * - NOT tied to calendar month (resets on 1st of month)
+   *
+   * Example:
+   * - User first request: March 17, 2026
+   * - Period 1: March 17 → April 15, 2026 (30 days)
+   * - Period 2: April 16 → May 15, 2026 (resets)
+   *
+   * Contrast with Gateway Key Monthly Limit:
+   * - Gateway Key: Resets on 1st of each month (calendar month)
+   * - User Monthly Requests: Rolling 30-day from first request (this method)
+   *
+   * @param userId - User ID to get metrics for
+   * @param projectId - Optional project ID to filter by
+   * @returns Metrics for current 30-day period with period info
+   */
+  async getCurrentBillingPeriodMetrics(userId: string, projectId?: string): Promise<{
+    summary: any;
+    periodStart: string;
+    periodEnd: string;
+    daysRemaining: number;
+  }> {
+    // Get first request date
+    const firstRequestDate = await this.getFirstRequestDate(userId);
+
+    if (!firstRequestDate) {
+      // No requests yet, return empty metrics
+      const now = new Date();
+      return {
+        summary: {
+          total_requests: 0,
+          total_cost_usd: 0,
+          total_prompt_tokens: 0,
+          total_completion_tokens: 0,
+          total_tokens: 0,
+          avg_latency_ms: 0
+        },
+        periodStart: now.toISOString().split('T')[0],
+        periodEnd: new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+        daysRemaining: 30
+      };
+    }
+
+    // Calculate current 30-day period
+    const now = new Date();
+    const daysSinceFirstRequest = Math.floor((now.getTime() - firstRequestDate.getTime()) / (1000 * 60 * 60 * 24));
+    const daysIntoCurrentPeriod = daysSinceFirstRequest % 30;
+    const periodsElapsed = Math.floor(daysSinceFirstRequest / 30);
+
+    // Calculate period start and end
+    const periodStart = new Date(firstRequestDate);
+    periodStart.setDate(periodStart.getDate() + (periodsElapsed * 30));
+
+    const periodEnd = new Date(periodStart);
+    periodEnd.setDate(periodEnd.getDate() + 30);
+
+    const daysRemaining = 30 - daysIntoCurrentPeriod;
+
+    const startDateStr = periodStart.toISOString().split('T')[0];
+    const endDateStr = periodEnd.toISOString().split('T')[0];
+
+    // Join request_logs with projects to filter by user_id and date range
+    let whereClause = `WHERE p.user_id = ? AND rl.created_at >= ? AND rl.created_at < ?`;
+    const params: any[] = [userId, startDateStr, endDateStr];
+
+    if (projectId) {
+      whereClause += ` AND rl.project_id = ?`;
+      params.push(projectId);
+    }
+
+    // Get summary metrics from request_logs
+    const summaryResult = await this.db.first(
+      `SELECT
+        COUNT(*) as total_requests,
+        SUM(rl.cost_usd) as total_cost_usd,
+        SUM(rl.prompt_tokens) as total_prompt_tokens,
+        SUM(rl.completion_tokens) as total_completion_tokens,
+        SUM(rl.total_tokens) as total_tokens,
+        AVG(rl.latency_ms) as avg_latency_ms
+       FROM request_logs rl
+       JOIN projects p ON rl.project_id = p.id
+       ${whereClause}`,
+      params
+    );
+
+    return {
+      summary: summaryResult || {},
+      periodStart: startDateStr,
+      periodEnd: endDateStr,
+      daysRemaining
     };
   }
 
@@ -554,10 +784,11 @@ export class UsageRepository {
         startDate = weekAgo.toISOString().split('T')[0];
         break;
       case 'month':
-        const monthAgo = new Date(now);
-        monthAgo.setMonth(now.getMonth() - 1);
-        startDate = monthAgo.toISOString().split('T')[0];
-        break;
+        // Current calendar month (1st to end of month)
+        const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+        const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+        startDate = startOfMonth.toISOString().split('T')[0];
+        return { startDate, endDate: endOfMonth.toISOString().split('T')[0] };
       case 'year':
         const yearAgo = new Date(now);
         yearAgo.setFullYear(now.getFullYear() - 1);

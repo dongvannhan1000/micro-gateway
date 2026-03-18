@@ -5,6 +5,22 @@ import { Project, GatewayKey } from '@ms-gateway/db';
 
 /**
  * Middleware to validate Gateway API Key for proxy requests
+ *
+ * IMPORTANT: Gateway Key Monthly Limit uses CALENDAR MONTH (different from User Monthly Requests)
+ *
+ * Gateway Key Limit Behavior:
+ * - Resets on 1st of each month at 00:00 UTC (calendar month)
+ * - Applied per individual key (each key has its own limit)
+ * - Enforced HARD BLOCK when exceeded (returns 403)
+ *
+ * User Monthly Requests (for comparison):
+ * - Rolling 30-day period from first request (personalized)
+ * - Applied at user level (all keys combined)
+ * - See: /api/management/user/quotas
+ *
+ * Example:
+ * - Gateway Key created March 15: Resets April 1, May 1, June 1...
+ * - User first request March 17: Period ends April 16, May 16...
  */
 export async function gatewayKeyAuth(c: Context<{ Bindings: Env; Variables: Variables }>, next: Next) {
     const authHeader = c.req.header('Authorization');

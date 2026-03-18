@@ -44,7 +44,8 @@ export class RequestLogRepository {
     );
   }
 
-  async getAnalyticsSummary(projectId: string, userId: string, days: number = 30): Promise<any> {
+  async getAnalyticsSummary(projectId: string, userId: string): Promise<any> {
+    // Get ALL TIME metrics - no date filter
     return this.db.first(
       `SELECT
         COUNT(*) as total_requests,
@@ -56,13 +57,13 @@ export class RequestLogRepository {
         COUNT(CASE WHEN prompt_injection_score >= 0.7 OR status_code = 403 THEN 1 END) as security_events
       FROM request_logs
       WHERE project_id = ?
-      AND created_at >= date('now', '-${days} days')
       AND project_id IN (SELECT id FROM projects WHERE user_id = ?)`,
       [projectId, userId]
     );
   }
 
-  async getDailyUsage(projectId: string, userId: string, days: number = 14): Promise<any[]> {
+  async getDailyUsage(projectId: string, userId: string): Promise<any[]> {
+    // Get ALL TIME daily breakdown - no date filter
     const { results } = await this.db.execute(
       `SELECT
         date(created_at) as day,
@@ -73,7 +74,6 @@ export class RequestLogRepository {
         TOTAL(total_tokens) as total_tokens
       FROM request_logs
       WHERE project_id = ?
-      AND created_at >= date('now', '-${days} days')
       AND project_id IN (SELECT id FROM projects WHERE user_id = ?)
       GROUP BY day
       ORDER BY day ASC`,
@@ -84,7 +84,7 @@ export class RequestLogRepository {
 
   async getSecurityLogs(projectId: string, userId: string, limit: number = 50): Promise<any[]> {
     const { results } = await this.db.execute(
-      `SELECT 
+      `SELECT
         id, model, status_code, prompt_injection_score, created_at
       FROM request_logs
       WHERE project_id = ?

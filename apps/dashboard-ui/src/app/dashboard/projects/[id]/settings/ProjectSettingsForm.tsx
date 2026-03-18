@@ -67,7 +67,8 @@ export function ProjectSettingsForm({
     providers,
     currentAliases,
     piiScrubbingLevel,
-    piiScrubbingEnabled
+    piiScrubbingEnabled,
+    defaultTab
 }: {
     projectId: string,
     projectName: string,
@@ -75,10 +76,11 @@ export function ProjectSettingsForm({
     providers: any[],
     currentAliases?: string,
     piiScrubbingLevel?: 'low' | 'medium' | 'high',
-    piiScrubbingEnabled?: boolean
+    piiScrubbingEnabled?: boolean,
+    defaultTab?: TabType
 }) {
     const router = useRouter();
-    const [activeTab, setActiveTab] = useState<TabType>('general');
+    const [activeTab, setActiveTab] = useState<TabType>(defaultTab || 'general');
     const [isPending, setIsPending] = useState(false);
 
     // General Settings State
@@ -105,10 +107,19 @@ export function ProjectSettingsForm({
         { id: 'together', name: 'Together AI', description: 'Open-source models' }
     ];
 
-    // Aliases State
+    // Aliases State - Convert backend object format {from: to} to UI array format [{from, to}]
     const [aliases, setAliases] = useState<any[]>(() => {
         try {
-            return currentAliases ? JSON.parse(currentAliases) : [];
+            if (!currentAliases) return [];
+            const parsed = JSON.parse(currentAliases);
+
+            // Convert object format to array format for UI
+            if (typeof parsed === 'object' && !Array.isArray(parsed)) {
+                return Object.entries(parsed).map(([from, to]) => ({ from, to: String(to) }));
+            }
+
+            // Already in array format
+            return Array.isArray(parsed) ? parsed : [];
         } catch {
             return [];
         }
@@ -172,7 +183,15 @@ export function ProjectSettingsForm({
     const handleSaveAliases = async () => {
         setIsPending(true);
         try {
-            await updateProjectSettings(projectId, { model_aliases: JSON.stringify(aliases) });
+            // Convert array format [{from, to}] to object format {from: to} for backend
+            const aliasesObject = aliases.reduce((acc, alias) => {
+                if (alias.from && alias.to) {
+                    acc[alias.from] = alias.to;
+                }
+                return acc;
+            }, {} as Record<string, string>);
+
+            await updateProjectSettings(projectId, { model_aliases: JSON.stringify(aliasesObject) });
             router.refresh();
         } catch (e) {
             console.error(e);

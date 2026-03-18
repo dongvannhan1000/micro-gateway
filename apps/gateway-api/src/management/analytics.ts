@@ -4,14 +4,14 @@ import { Env, Variables } from '../types';
 const analytics = new Hono<{ Bindings: Env; Variables: Variables }>();
 
 // GET /projects/:projectId/analytics/summary
-// Returns high-level metrics for the last 30 days
+// Returns high-level metrics from user's first request to now
 analytics.get('/summary', async (c) => {
     const user = c.get('user')!;
     const repos = c.get('repos')!;
     const projectId = c.req.param('projectId')!;
 
     try {
-        const stats: any = await repos.requestLog.getAnalyticsSummary(projectId, user.id, 30);
+        const stats: any = await repos.requestLog.getAnalyticsSummary(projectId, user.id);
 
         if (!stats) return c.json({ totalRequests: 0, totalCost: 0, avgLatency: 0, securityEvents: 0 });
 
@@ -31,14 +31,14 @@ analytics.get('/summary', async (c) => {
 });
 
 // GET /projects/:projectId/analytics/usage
-// Returns daily usage and cost data for the last 14 days
+// Returns daily usage and cost data from user's first request to now
 analytics.get('/usage', async (c) => {
     const user = c.get('user')!;
     const repos = c.get('repos')!;
     const projectId = c.req.param('projectId')!;
 
     try {
-        const results = await repos.requestLog.getDailyUsage(projectId, user.id, 14);
+        const results = await repos.requestLog.getDailyUsage(projectId, user.id);
         return c.json(results);
     } catch (err: any) {
         console.error('[Analytics] Usage Error:', err.message, err.stack);

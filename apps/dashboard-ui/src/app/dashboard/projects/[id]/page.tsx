@@ -3,7 +3,6 @@ import { fetchGateway } from '@/utils/api';
 import { Project, GatewayKey } from '@ms-gateway/db';
 import { NewKeyModal } from '@/components/NewKeyModal';
 import { RevokeKeyButton } from '@/components/RevokeKeyButton';
-import { ModelAliasingModal } from '@/components/ModelAliasingModal';
 import {
     Key,
     Settings,
@@ -210,7 +209,12 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
                         ) : null}
                         <div className="text-center py-2 space-y-2">
                             {!project.model_aliases && <p className="text-xs text-muted italic mb-2">No model aliases configured.</p>}
-                            <ModelAliasingModal projectId={id} currentAliases={project.model_aliases} />
+                            <Link
+                                href={`/dashboard/projects/${id}/settings?tab=aliases`}
+                                className="text-[10px] text-accent-blue hover:underline uppercase font-bold tracking-wider inline-flex items-center gap-1"
+                            >
+                                Configure Aliasing <Settings className="w-3 h-3" />
+                            </Link>
                         </div>
                     </div>
                 </div>

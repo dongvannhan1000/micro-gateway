@@ -21,10 +21,8 @@ billing.get('/usage', async (c) => {
   }
 
   try {
-    const usage = await repos.userUsage.getMetrics(user.id, {
-      period: period as any,
-      projectId
-    });
+    // For Usage page, get ALL TIME metrics (from first request to now)
+    const usage = await repos.userUsage.getAllTimeMetrics(user.id, projectId);
 
     return c.json(usage);
   } catch (error) {
@@ -95,6 +93,17 @@ billing.get('/quotas', async (c) => {
   const user = c.get('user')!;
   const repos = c.get('repos')!;
 
+  // IMPORTANT: User Monthly Requests uses ROLLING 30-DAY period (different from Gateway Key calendar month)
+  // - User Monthly Requests: Rolling 30-day from first request (personalized per user)
+  // - Gateway Key Monthly Limit: Calendar month, resets on 1st of each month
+  //
+  // Example:
+  // - User first request March 17, 2026:
+  //   - Period 1: March 17 → April 15 (30 days)
+  //   - Period 2: April 16 → May 15 (resets)
+  // - Gateway Key created March 15:
+  //   - Resets April 1, May 1, June 1... (calendar month)
+
   try {
     // Get user data to check trial limits
     const userData = await repos.userProfile.findById(user.id);
@@ -114,37 +123,27 @@ billing.get('/quotas', async (c) => {
     const gatewayKeys = await repos.gatewayKey.findAllByUser(user.id);
     const keyCount = gatewayKeys.length;
 
-    // Calculate monthly usage from request logs
-    const now = new Date();
-    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-    const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0);
-
-    // Get usage metrics for current month
-    const usageData = await repos.userUsage.getMetrics(user.id, {
-      period: 'month'
-    });
+    // Get current 30-day billing period metrics (resets every 30 days from first request)
+    const billingData = await repos.userUsage.getCurrentBillingPeriodMetrics(user.id);
 
     // Free tier limits
     const freeTierLimits = {
       projects: 2,
       gateway_keys: 3,
-      monthly_requests: 10000,
-      monthly_spend_usd: 10.00
+      monthly_requests: 10000
     };
 
     // Calculate remaining quotas
     const projectRemaining = Math.max(0, freeTierLimits.projects - projectCount);
     const keyRemaining = Math.max(0, freeTierLimits.gateway_keys - keyCount);
 
-    // Get current month usage
-    const currentRequests = usageData.summary.total_requests || 0;
-    const currentSpend = usageData.summary.total_cost_usd || 0;
+    // Get current billing period usage
+    const currentRequests = billingData.summary.total_requests || 0;
 
     const requestRemaining = Math.max(0, freeTierLimits.monthly_requests - currentRequests);
-    const spendRemaining = Math.max(0, freeTierLimits.monthly_spend_usd - currentSpend);
 
-    // Calculate reset date (first day of next month)
-    const resetDate = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+    // Reset date is end of current 30-day period
+    const resetDate = new Date(billingData.periodEnd);
 
     // Generate usage warnings
     const warnings: any[] = [];
@@ -180,21 +179,13 @@ billing.get('/quotas', async (c) => {
     if (currentRequests > freeTierLimits.monthly_requests) {
       warnings.push({
         type: 'monthly_requests',
-        message: 'You\'ve exceeded your monthly request limit. Consider upgrading.',
+        message: `You've exceeded your monthly request limit. Resets in ${billingData.daysRemaining} days. Consider upgrading.`,
         severity: 'warning'
       });
     } else if (currentRequests > freeTierLimits.monthly_requests * 0.8) {
       warnings.push({
         type: 'monthly_requests',
-        message: 'You\'ve used 80% of your monthly request limit.',
-        severity: 'warning'
-      });
-    }
-
-    if (currentSpend > freeTierLimits.monthly_spend_usd * 0.8) {
-      warnings.push({
-        type: 'monthly_spend',
-        message: `You've used 80% of your monthly spend limit ($${currentSpend.toFixed(2)} of $${freeTierLimits.monthly_spend_usd}).`,
+        message: `You've used 80% of your monthly request limit. Resets in ${billingData.daysRemaining} days.`,
         severity: 'warning'
       });
     }
@@ -216,13 +207,9 @@ billing.get('/quotas', async (c) => {
           max: freeTierLimits.monthly_requests,
           current: currentRequests,
           remaining: requestRemaining,
-          reset_date: resetDate.toISOString()
-        },
-        monthly_spend_usd: {
-          max: freeTierLimits.monthly_spend_usd,
-          current: currentSpend,
-          remaining: spendRemaining,
-          reset_date: resetDate.toISOString()
+          period_start: billingData.periodStart,
+          period_end: billingData.periodEnd,
+          days_remaining: billingData.daysRemaining
         }
       },
       usage_warnings: warnings

@@ -19,8 +19,7 @@ interface QuotaData {
     limits: {
         projects: { max: number; current: number; remaining: number };
         gateway_keys: { max: number; current: number; remaining: number };
-        monthly_requests: { max: number; current: number; remaining: number; reset_date: string };
-        monthly_spend_usd: { max: number; current: number; remaining: number; reset_date: string };
+        monthly_requests: { max: number; current: number; remaining: number; period_start: string; period_end: string; days_remaining: number };
     };
     usage_warnings: Array<{ type: string; message: string; severity: string }>;
 }
@@ -41,8 +40,14 @@ const MOCK_QUOTAS: QuotaData = {
     limits: {
         projects: { max: 2, current: 1, remaining: 1 },
         gateway_keys: { max: 3, current: 1, remaining: 2 },
-        monthly_requests: { max: 10000, current: 1254, remaining: 8746, reset_date: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString() },
-        monthly_spend_usd: { max: 10, current: 3.42, remaining: 6.58, reset_date: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString() }
+        monthly_requests: {
+            max: 10000,
+            current: 1254,
+            remaining: 8746,
+            period_start: new Date().toISOString().split('T')[0],
+            period_end: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+            days_remaining: 30
+        }
     },
     usage_warnings: [
         { type: 'monthly_requests', message: 'You\'ve used 80% of your monthly request limit.', severity: 'warning' }
@@ -169,11 +174,6 @@ export function UsageSection() {
         }
         loadQuotas();
     }, []);
-
-    const monthlyLimit = quotas?.limits?.monthly_spend_usd?.max || 100;
-    const usagePercentage = monthlyLimit > 0 && metrics?.total_cost_usd !== undefined
-        ? (metrics.total_cost_usd / monthlyLimit) * 100
-        : 0;
 
     const MetricCard = ({ title, value, icon: Icon }: any) => (
         <div className="bg-glass-bg border border-glass-border rounded-xl p-4 hover:border-accent-blue/30 transition-colors">
@@ -341,36 +341,13 @@ export function UsageSection() {
                                     </div>
                                 </div>
                             </div>
-                            {quotas && quotas.limits && (
-                                <div className="bg-glass-bg border border-glass-border rounded-xl p-4 space-y-3">
-                                    <div className="flex items-center justify-between">
-                                        <div>
-                                            <h4 className="font-bold">Monthly Spending Limit</h4>
-                                            <p className="text-sm text-muted">Your current monthly budget</p>
+                            {quotas && quotas.usage_warnings && quotas.usage_warnings.length > 0 && (
+                                <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-xl p-4 space-y-2">
+                                    {quotas.usage_warnings.map((warning, idx) => (
+                                        <div key={idx} className="text-sm text-yellow-500">
+                                            ⚠️ {warning.message}
                                         </div>
-                                        <div className="text-right">
-                                            <div className="text-2xl font-bold">${(metrics.total_cost_usd || 0).toFixed(2)}</div>
-                                            <div className="text-sm text-muted">of ${monthlyLimit} limit</div>
-                                        </div>
-                                    </div>
-                                    <div className="h-3 bg-glass-bg rounded-full overflow-hidden border border-glass-border">
-                                        <div className={`h-full rounded-full transition-all duration-500 ${
-                                            usagePercentage > 80 ? 'bg-red-500 shadow-[0_0_10px_rgba(239,68,68,0.5)]' : 'bg-accent-blue shadow-[0_0_10px_rgba(77,159,255,0.5)]'
-                                        }`} style={{ width: `${Math.min(usagePercentage, 100)}%` }} />
-                                    </div>
-                                    <div className="flex justify-between text-xs text-muted">
-                                        <span>{usagePercentage.toFixed(1)}% used</span>
-                                        <span>${Math.max(0, monthlyLimit - (metrics.total_cost_usd || 0)).toFixed(2)} remaining</span>
-                                    </div>
-                                    {quotas.usage_warnings && quotas.usage_warnings.length > 0 && (
-                                        <div className="mt-2 space-y-1">
-                                            {quotas.usage_warnings.map((warning, idx) => (
-                                                <div key={idx} className="text-xs text-yellow-500">
-                                                    ⚠️ {warning.message}
-                                                </div>
-                                            ))}
-                                        </div>
-                                    )}
+                                    ))}
                                 </div>
                             )}
                         </>
@@ -382,9 +359,16 @@ export function UsageSection() {
             </SettingsSection>
             {quotas && quotas.limits && (
                 <SettingsSection title="Quota Status" description="Track your resource quotas and limits" icon={<Activity className="w-5 h-5 text-accent-blue" />}>
+                    <div className="mb-6 p-4 bg-glass-bg border border-glass-border rounded-xl space-y-2">
+                        <h4 className="font-bold text-sm">📅 Understanding Your Limits</h4>
+                        <div className="text-xs text-muted space-y-1">
+                            <p><span className="font-medium text-accent-blue">Monthly Requests:</span> Rolling 30-day period from your first API request (personalized to your account)</p>
+                            <p><span className="font-medium text-accent-violet">Gateway Key Limits:</span> Calendar month (resets on the 1st of each month at 00:00 UTC)</p>
+                        </div>
+                    </div>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <QuotaProgress
-                            label="Monthly Requests"
+                            label="Monthly Requests (Rolling 30-day)"
                             used={quotas.limits.monthly_requests?.current || 0}
                             total={quotas.limits.monthly_requests?.max || 10000}
                             unit="requests"
@@ -396,19 +380,27 @@ export function UsageSection() {
                             unit="projects"
                         />
                     </div>
-                    <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="mt-4">
                         <QuotaProgress
-                            label="Gateway Keys"
+                            label="Gateway Keys (Calendar Month)"
                             used={quotas.limits.gateway_keys?.current || 0}
                             total={quotas.limits.gateway_keys?.max || 3}
                             unit="keys"
                         />
-                        <QuotaProgress
-                            label="Monthly Spend"
-                            used={quotas.limits.monthly_spend_usd?.current || 0}
-                            total={quotas.limits.monthly_spend_usd?.max || 10}
-                            unit="USD"
-                        />
+                    </div>
+                    {quotas.limits.monthly_requests?.days_remaining !== undefined && (
+                        <div className="mt-4 p-3 bg-accent-blue/10 border border-accent-blue/30 rounded-lg">
+                            <div className="text-center text-sm">
+                                <span className="text-accent-blue font-medium">Your 30-day period ends in {quotas.limits.monthly_requests.days_remaining} days</span>
+                                <p className="text-xs text-muted mt-1">Since your first API request on {new Date(quotas.limits.monthly_requests.period_start).toLocaleDateString()}</p>
+                            </div>
+                        </div>
+                    )}
+                    <div className="mt-3 p-3 bg-accent-violet/10 border border-accent-violet/30 rounded-lg">
+                        <div className="text-center text-sm">
+                            <span className="text-accent-violet font-medium">Gateway Key limits reset on the 1st of each month at 00:00 UTC</span>
+                            <p className="text-xs text-muted mt-1">Individual key spending limits are managed per key in project settings</p>
+                        </div>
                     </div>
                 </SettingsSection>
             )}

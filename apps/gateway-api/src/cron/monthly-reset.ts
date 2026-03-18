@@ -4,6 +4,14 @@
  * Cloudflare Workers Cron Trigger that runs on the 1st day of every month at 00:00 UTC
  * Resets current_month_usage_usd to 0 for all active (non-revoked) API keys
  *
+ * IMPORTANT: This is a CALENDAR MONTH reset (different from user-level rolling 30-day period)
+ * - Gateway Key Monthly Limit: Resets on 1st of each month (calendar month)
+ * - User Monthly Requests: Rolling 30-day from first request (personalized)
+ *
+ * Example:
+ * - Gateway Key created March 15: Limit resets April 1, May 1, June 1...
+ * - User first request March 17: 30-day period resets April 16, May 16...
+ *
  * Scheduled: 0 0 1 * * (At 00:00 on day-of-month 1)
  * Documentation: https://developers.cloudflare.com/workers/configuration/cron-triggers/
  */

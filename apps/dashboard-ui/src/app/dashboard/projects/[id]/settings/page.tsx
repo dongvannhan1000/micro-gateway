@@ -60,6 +60,7 @@ export default async function ProjectSettingsPage({ params }: { params: { id: st
                 currentAliases={project.model_aliases}
                 piiScrubbingLevel={project.pii_scrubbing_level || 'medium'}
                 piiScrubbingEnabled={project.pii_scrubbing_enabled !== 0}
+                defaultTab="aliases"
             />
         </div>
     );

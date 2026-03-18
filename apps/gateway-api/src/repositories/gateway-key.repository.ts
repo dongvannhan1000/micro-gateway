@@ -2,6 +2,16 @@ import { DatabaseAdapter, GatewayKey } from '@ms-gateway/db';
 
 /**
  * Repository for `gateway_keys` table operations.
+ *
+ * IMPORTANT: Gateway Key monthly usage follows CALENDAR MONTH (not rolling 30-day)
+ *
+ * - current_month_usage_usd: Resets on 1st of each month at 00:00 UTC
+ * - monthly_limit_usd: Per-key spending limit for calendar month
+ * - Contrast with User Monthly Requests: Rolling 30-day from first request
+ *
+ * Example:
+ * - Gateway Key created March 15: Usage resets April 1, May 1, June 1...
+ * - User first request March 17: 30-day period resets April 16, May 16...
  */
 export class GatewayKeyRepository {
   constructor(private db: DatabaseAdapter) {}

@@ -8,8 +8,10 @@ export class ProjectRepository {
   constructor(private db: DatabaseAdapter) {}
 
   async findAllByUser(userId: string): Promise<Project[]> {
+    // Get ALL TIME metrics - no date filter
+    // This ensures we count all requests from the beginning
     const { results } = await this.db.execute<Project>(
-      `SELECT 
+      `SELECT
         p.*,
         COUNT(r.id) as total_requests,
         TOTAL(r.cost_usd) as total_cost,
@@ -26,8 +28,9 @@ export class ProjectRepository {
   }
 
   async findByIdAndUser(id: string, userId: string): Promise<Project | null> {
+    // Get ALL TIME metrics - no date filter
     return this.db.first<Project>(
-      `SELECT 
+      `SELECT
         p.*,
         COUNT(r.id) as total_requests,
         TOTAL(r.cost_usd) as total_cost,
