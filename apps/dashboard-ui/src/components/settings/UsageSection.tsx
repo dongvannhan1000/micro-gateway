@@ -13,9 +13,14 @@ interface UsageMetrics {
 }
 
 interface QuotaData {
-    limits: { monthly_spend_usd: number; monthly_requests: number };
-    usage: { monthly_requests: number; monthly_tokens: number };
-    usage_warnings: any[];
+    tier: string;
+    limits: {
+        projects: { max: number; current: number; remaining: number };
+        gateway_keys: { max: number; current: number; remaining: number };
+        monthly_requests: { max: number; current: number; remaining: number; reset_date: string };
+        monthly_spend_usd: { max: number; current: number; remaining: number; reset_date: string };
+    };
+    usage_warnings: Array<{ type: string; message: string; severity: string }>;
 }
 
 interface UsageData { date: string; cost: number; }
@@ -28,16 +33,15 @@ const MOCK_METRICS: UsageMetrics = {
 };
 
 const MOCK_QUOTAS: QuotaData = {
+    tier: 'free',
     limits: {
-        monthly_spend_usd: 100,
-        monthly_requests: 50000
-    },
-    usage: {
-        monthly_requests: 12543,
-        monthly_tokens: 45210000
+        projects: { max: 2, current: 1, remaining: 1 },
+        gateway_keys: { max: 3, current: 1, remaining: 2 },
+        monthly_requests: { max: 10000, current: 1254, remaining: 8746, reset_date: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString() },
+        monthly_spend_usd: { max: 10, current: 3.42, remaining: 6.58, reset_date: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString() }
     },
     usage_warnings: [
-        { message: 'You\'ve used 80% of your monthly request limit.' }
+        { type: 'monthly_requests', message: 'You\'ve used 80% of your monthly request limit.', severity: 'warning' }
     ]
 };
 
@@ -55,7 +59,7 @@ export function UsageSection() {
     const [quotas, setQuotas] = useState<QuotaData | null>(null);
     const [usageData, setUsageData] = useState<UsageData[]>([]);
     const [error, setError] = useState<string | null>(null);
-    const [useMockData, setUseMockData] = useState(false); // Toggle for demo
+    const [isUsingMockData, setIsUsingMockData] = useState(false); // Track if currently showing mock
 
     useEffect(() => {
         async function loadUsage() {
@@ -69,17 +73,21 @@ export function UsageSection() {
 
                     // Handle null/undefined summary safely
                     if (data && data.summary) {
+                        // Use real data from API (even if it's 0)
                         const realMetrics = {
                             total_requests: data.summary.total_requests || 0,
                             total_cost_usd: data.summary.total_cost_usd || 0,
                             total_tokens: data.summary.total_tokens || 0
                         };
-
-                        // Use mock data if real data is empty/zero and mock mode is enabled
-                        const hasRealData = realMetrics.total_requests > 0 || realMetrics.total_cost_usd > 0;
-                        setMetrics(hasRealData ? realMetrics : MOCK_METRICS);
+                        console.log('[Usage] Real metrics from API:', realMetrics);
+                        setMetrics(realMetrics);
+                        setIsUsingMockData(false); // Using real data
                     } else {
-                        setMetrics(MOCK_METRICS); // Use mock when no data
+                        // Only use mock if API returns null/undefined (not if it returns 0)
+                        console.log('[Usage] API returned null data, using mock');
+                        console.log('[Usage] Mock metrics:', MOCK_METRICS);
+                        setMetrics(MOCK_METRICS);
+                        setIsUsingMockData(true); // Using mock data
                     }
 
                     if (data && data.daily_breakdown) {
@@ -87,9 +95,17 @@ export function UsageSection() {
                             date: new Date(date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
                             cost: value.total_cost_usd || 0
                         }));
-                        setUsageData(chartData.length > 0 ? chartData.slice(-7) : MOCK_DAILY_DATA);
+                        setUsageData(chartData.slice(-7));
+                        setIsUsingMockData(false); // Using real data
+                    } else if (data && Object.keys(data).length > 0) {
+                        // API returned data but no daily_breakdown (empty array)
+                        setUsageData([]);
+                        setIsUsingMockData(false); // Using real data
                     } else {
-                        setUsageData(MOCK_DAILY_DATA); // Use mock when no data
+                        // Only use mock if API returns null/undefined
+                        console.log('[Usage] No daily breakdown from API, using mock');
+                        setUsageData(MOCK_DAILY_DATA);
+                        setIsUsingMockData(true); // Using mock data
                     }
                 }
             } catch (err: any) {
@@ -106,6 +122,7 @@ export function UsageSection() {
                 // Use mock data on error
                 setMetrics(MOCK_METRICS);
                 setUsageData(MOCK_DAILY_DATA);
+                setIsUsingMockData(true); // Using mock data
             } finally {
                 setIsLoading(false);
             }
@@ -121,25 +138,33 @@ export function UsageSection() {
                 if (session) {
                     const data = await getUserQuotas(session.access_token);
 
-                    // Use mock data if API fails or returns empty data
-                    if (!data || !data.limits || !data.usage) {
-                        console.log('Using mock quota data');
-                        setQuotas(MOCK_QUOTAS);
-                    } else {
+                    // Use real data from API (even if usage is 0)
+                    if (data && data.limits) {
                         setQuotas(data);
+                        setIsUsingMockData(false); // Using real data
+                    } else if (data && Object.keys(data).length > 0) {
+                        // API returned partial data, use what we have
+                        setQuotas(data);
+                        setIsUsingMockData(false); // Using real data
+                    } else {
+                        // Only use mock if API returns null/undefined
+                        console.log('[Quotas] API returned null data, using mock');
+                        setQuotas(MOCK_QUOTAS);
+                        setIsUsingMockData(true); // Using mock data
                     }
                 }
             } catch (err: any) {
                 console.error('Failed to load quotas:', err);
                 // Use mock data if API fails
-                console.log('Using mock quota data due to error');
+                console.log('[Quotas] API error, using mock data');
                 setQuotas(MOCK_QUOTAS);
+                setIsUsingMockData(true); // Using mock data
             }
         }
         loadQuotas();
     }, []);
 
-    const monthlyLimit = quotas?.limits?.monthly_spend_usd || 100;
+    const monthlyLimit = quotas?.limits?.monthly_spend_usd?.max || 100;
     const usagePercentage = monthlyLimit > 0 && metrics?.total_cost_usd !== undefined
         ? (metrics.total_cost_usd / monthlyLimit) * 100
         : 0;
@@ -219,6 +244,26 @@ export function UsageSection() {
         );
     }
 
+    // Debug: Log current state
+    console.log('[Usage] Render state:', {
+        isLoading,
+        isUsingMockData,
+        metrics,
+        quotas: quotas ? 'exists' : 'null',
+        error,
+        hasNoData: !metrics || (metrics.total_requests === 0 && metrics.total_cost_usd === 0 && metrics.total_tokens === 0),
+        willShowEmptyState: !metrics || (!isUsingMockData && metrics.total_requests === 0 && metrics.total_cost_usd === 0 && metrics.total_tokens === 0)
+    });
+
+    console.log('[Usage] Checking render condition:', {
+        metrics: metrics,
+        isUsingMockData: isUsingMockData,
+        condition: !metrics || (!isUsingMockData && metrics.total_requests === 0 && metrics.total_cost_usd === 0 && metrics.total_tokens === 0),
+        total_requests: metrics?.total_requests,
+        total_cost_usd: metrics?.total_cost_usd,
+        total_tokens: metrics?.total_tokens
+    });
+
     if (error) {
         return (
             <div className="space-y-6">
@@ -229,27 +274,17 @@ export function UsageSection() {
         );
     }
 
-    // Check if currently showing mock data
-    const isShowingMockData = metrics.total_requests === MOCK_METRICS.total_requests ||
-                               quotas === MOCK_QUOTAS;
-
     return (
         <div className="space-y-6">
             <SettingsSection title="Usage Overview" description="Monitor your API usage and costs" icon={<Activity className="w-5 h-5 text-accent-blue" />}>
                 <div className="space-y-6">
                     {/* Mock Data Indicator */}
-                    {isShowingMockData && (
-                        <div className="bg-yellow-500/10 border border-yellow-500/30 text-yellow-500 px-4 py-3 rounded-xl text-sm font-medium flex items-center justify-between">
-                            <span>🎭 Showing demo data (make API calls to see real metrics)</span>
-                            <button
-                                onClick={() => setUseMockData(!useMockData)}
-                                className="text-xs underline hover:text-yellow-400"
-                            >
-                                {useMockData ? 'Disable' : 'Enable'} Mock
-                            </button>
+                    {isUsingMockData && (
+                        <div className="bg-yellow-500/10 border border-yellow-500/30 text-yellow-500 px-4 py-3 rounded-xl text-sm font-medium">
+                            🎭 Showing demo data (API returned null/error - make API calls to see real metrics)
                         </div>
                     )}
-                    {(!metrics || (metrics.total_requests === 0 && metrics.total_cost_usd === 0)) ? (
+                    {(!metrics || (!isUsingMockData && metrics.total_requests === 0 && metrics.total_cost_usd === 0 && metrics.total_tokens === 0)) ? (
                         <div className="text-center py-12 text-muted">
                             <Activity className="w-12 h-12 mx-auto mb-4 opacity-50" />
                             <p>No usage data yet</p>
@@ -296,9 +331,11 @@ export function UsageSection() {
                                         <span>${Math.max(0, monthlyLimit - (metrics.total_cost_usd || 0)).toFixed(2)} remaining</span>
                                     </div>
                                     {quotas.usage_warnings && quotas.usage_warnings.length > 0 && (
-                                        <div className="mt-2 text-xs text-yellow-500">
+                                        <div className="mt-2 space-y-1">
                                             {quotas.usage_warnings.map((warning, idx) => (
-                                                <div key={idx}>⚠️ {typeof warning === 'string' ? warning : warning.message}</div>
+                                                <div key={idx} className="text-xs text-yellow-500">
+                                                    ⚠️ {warning.message}
+                                                </div>
                                             ))}
                                         </div>
                                     )}
@@ -311,20 +348,34 @@ export function UsageSection() {
             <SettingsSection title="Usage Analytics" description="Detailed usage trends and patterns" icon={<TrendingUp className="w-5 h-5 text-accent-violet" />}>
                 <UsageChart />
             </SettingsSection>
-            {quotas && quotas.limits && quotas.usage && (
+            {quotas && quotas.limits && (
                 <SettingsSection title="Quota Status" description="Track your resource quotas and limits" icon={<Activity className="w-5 h-5 text-accent-blue" />}>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <QuotaProgress
                             label="Monthly Requests"
-                            used={quotas.usage.monthly_requests || 0}
-                            total={quotas.limits.monthly_requests || 10000}
+                            used={quotas.limits.monthly_requests?.current || 0}
+                            total={quotas.limits.monthly_requests?.max || 10000}
                             unit="requests"
                         />
                         <QuotaProgress
-                            label="Monthly Tokens"
-                            used={quotas.usage.monthly_tokens || 0}
-                            total={(quotas.limits.monthly_requests || 10000) * 1000}
-                            unit="tokens"
+                            label="Projects"
+                            used={quotas.limits.projects?.current || 0}
+                            total={quotas.limits.projects?.max || 2}
+                            unit="projects"
+                        />
+                    </div>
+                    <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <QuotaProgress
+                            label="Gateway Keys"
+                            used={quotas.limits.gateway_keys?.current || 0}
+                            total={quotas.limits.gateway_keys?.max || 3}
+                            unit="keys"
+                        />
+                        <QuotaProgress
+                            label="Monthly Spend"
+                            used={quotas.limits.monthly_spend_usd?.current || 0}
+                            total={quotas.limits.monthly_spend_usd?.max || 10}
+                            unit="USD"
                         />
                     </div>
                 </SettingsSection>
