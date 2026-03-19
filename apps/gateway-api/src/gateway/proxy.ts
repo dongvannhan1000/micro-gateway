@@ -6,6 +6,7 @@ import { decryptProviderKey } from '../utils/crypto';
 import { PricingService } from '../services/pricing-service';
 import { scrubPIIForLogging } from '../middleware/pii-scrub';
 import { logger } from '../utils/logger';
+import { retryWithBackoff } from '../utils/retry';
 
 const GEMINI_OPENAI_BASE_URL = 'https://generativelanguage.googleapis.com/v1beta/openai/';
 
@@ -190,9 +191,35 @@ export async function proxyHandler(c: Context<{ Bindings: Env; Variables: Variab
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), timeout);
 
-        const response = await fetch(forwardRequest, {
-            signal: controller.signal
-        });
+        // Retry logic with exponential backoff
+        const response = await retryWithBackoff(
+            async () => {
+                const providerResponse = await fetch(forwardRequest, {
+                    signal: controller.signal
+                });
+
+                // Retry on transient failures (5xx errors, timeouts)
+                if (!providerResponse.ok) {
+                    const error = new Error(`Provider returned ${providerResponse.status} ${providerResponse.statusText}`);
+
+                    // Don't retry on client errors (4xx) - these are not transient
+                    if (providerResponse.status >= 400 && providerResponse.status < 500) {
+                        // Mark this error as non-retryable
+                        (error as any).isRetryable = false;
+                    }
+
+                    throw error;
+                }
+
+                return providerResponse;
+            },
+            {
+                maxRetries: 3,
+                initialDelay: 1000,  // 1 second
+                maxDelay: timeout,    // Don't exceed overall timeout
+                jitter: true
+            }
+        );
 
         clearTimeout(timeoutId);
         const latency = Date.now() - startTime;
@@ -316,8 +343,26 @@ export async function proxyHandler(c: Context<{ Bindings: Env; Variables: Variab
             }, 408);
         }
 
-        console.error('[Gateway] [Proxy] Fetch error:', err);
-        return openAiError(c, 'Failed to connect to AI provider', 'server_error', null, 502);
+        // Check if error is from retry exhaustion
+        const isRetryable = !(err as any).isRetryable;
+        const errorMessage = err.message || 'Unknown error';
+
+        console.error('[Gateway] [Proxy] Fetch error after retries:', err);
+
+        return c.json({
+            error: {
+                message: isRetryable
+                    ? `Provider request failed after retries: ${errorMessage}`
+                    : `Provider request failed: ${errorMessage}`,
+                type: 'provider_error',
+                code: 'provider_failure',
+                details: {
+                    provider: providerName,
+                    model: targetModel,
+                    retries: isRetryable ? 3 : 0
+                }
+            }
+        }, 502);
     }
 }
 
