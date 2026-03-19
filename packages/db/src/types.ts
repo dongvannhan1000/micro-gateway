@@ -14,6 +14,9 @@ export interface Project {
     total_cost?: number;
     avg_latency?: number | null;
     security_events?: number;
+    // Tier system for bulkhead concurrent request limits
+    tier: 'free' | 'pro' | 'custom';      // NEW
+    concurrent_limit: number;             // NEW
 }
 
 export interface GatewayKey {
