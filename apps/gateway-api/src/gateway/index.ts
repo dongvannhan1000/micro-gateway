@@ -3,6 +3,7 @@ import { Env, Variables } from '../types';
 import { gatewayKeyAuth } from '../middleware/api-key-auth';
 import { rateLimiter } from '../middleware/rate-limiter';
 import { bulkhead } from '../middleware/bulkhead';
+import { requestTimeout } from '../middleware/request-timeout';
 import { contentFilter } from '../middleware/content-filter';
 import { anomalyHandler } from '../middleware/anomaly-handler';
 import { piiScrubber } from '../middleware/pii-scrub';
@@ -14,6 +15,7 @@ const gateway = new Hono<{ Bindings: Env; Variables: Variables }>();
 gateway.use('*', gatewayKeyAuth);
 gateway.use('*', rateLimiter);
 gateway.use('*', bulkhead); // Limit concurrent requests per project
+gateway.use('*', requestTimeout({ timeout: 30000 })); // 30s timeout
 gateway.use('*', piiScrubber); // PII scrubbing before anomaly detection and content filtering
 gateway.use('*', anomalyHandler);
 gateway.use('*', contentFilter);

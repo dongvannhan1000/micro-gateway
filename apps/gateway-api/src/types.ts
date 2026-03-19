@@ -30,5 +30,6 @@ export interface Variables {
     };
     piiRawRequest?: string; // Raw request body for lazy scrubbing
     piiRawResponse?: string; // Raw response body for lazy scrubbing
+    timeoutDeadline?: Date; // Request timeout deadline
 }
 
