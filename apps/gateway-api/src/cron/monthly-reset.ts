@@ -89,14 +89,14 @@ export async function monthlyUsageReset(env: Env): Promise<ResetResult> {
 }
 
 /**
- * Cloudflare Workers Scheduled Event Handler
- * This function is exported and invoked by Cloudflare Workers cron trigger
+ * Cloudflare Workers Scheduled Event Handler for Monthly Reset
+ * This function is exported and invoked by the scheduled dispatcher
  *
  * @param event - Scheduled event with cron property
  * @param env - Cloudflare Workers environment bindings
  * @param ctx - Execution context (for waitUntil, etc.)
  */
-export async function scheduled(
+export async function scheduledMonthlyReset(
   event: ScheduledEvent,
   env: Env,
   ctx: ExecutionContext

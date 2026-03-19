@@ -6,7 +6,7 @@ import { publicAPIRouter } from './public';
 import { injectDatabase } from './middleware/inject-db';
 import { correlationId } from './middleware/correlation-id';
 import { metricsCollector } from './middleware/metrics-collector';
-import { scheduled } from './cron/monthly-reset';
+import { scheduled } from './cron/scheduled-dispatcher';
 
 const app = new Hono<{ Bindings: Env; Variables: Variables }>();
 
