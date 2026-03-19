@@ -4,9 +4,9 @@
  * Cloudflare Workers only allows ONE `scheduled` export, so this dispatcher
  * routes cron events to the appropriate handler based on the cron expression.
  *
- * Supported cron schedules:
- * - "0 0 1 * *" (Monthly reset - 1st day of every month at midnight)
- * - "*/5 * * * *" (Provider health checks - every 5 minutes)
+ * Supported cron schedules (configured in wrangler.toml):
+ * - Monthly reset: 1st day of every month at midnight
+ * - Provider health checks: every 5 minutes
  *
  * Documentation: https://developers.cloudflare.com/workers/configuration/cron-triggers/
  */

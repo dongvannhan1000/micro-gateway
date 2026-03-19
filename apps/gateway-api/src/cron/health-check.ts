@@ -5,7 +5,7 @@
  * Monitors health and latency of all AI providers (OpenAI, Anthropic, Google, DeepSeek, Groq, Together)
  * Stores metrics in KV for dashboard display and circuit breaker integration
  *
- * Scheduled: */5 * * * * (Every 5 minutes)
+ * Cron Schedule: Every 5 minutes (see wrangler.toml for cron expression)
  * Documentation: https://developers.cloudflare.com/workers/configuration/cron-triggers/
  */
 
