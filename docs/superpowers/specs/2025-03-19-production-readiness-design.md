@@ -96,6 +96,12 @@ State: HALF_OPEN (testing)
 - KV key: `breaker:{provider}:failures` (failure count)
 - KV key: `breaker:{provider}:last_failure_time` (timestamp)
 
+**Scope:**
+- **Global per provider** (not per-project)
+- All projects share the same circuit breaker state for OpenAI
+- Prevents cascading failures across all projects when provider is down
+- More efficient than per-project circuit breakers
+
 **Configuration:**
 - Failure threshold: 50%
 - Time window: 60 seconds
@@ -128,9 +134,33 @@ fetch(providerURL, {
 **Purpose:** Limit concurrent requests per project to prevent resource exhaustion and ensure fair allocation.
 
 **Configuration per Tier:**
+
+**Tier System Design:**
+```typescript
+// Database schema: Add tier column to projects table
+interface Project {
+    id: string;
+    name: string;
+    tier: 'free' | 'pro' | 'custom';  // NEW field
+    concurrent_limit: number;          // NEW field (derived from tier)
+}
+
+// Tier configurations
+const TIER_CONFIGS = {
+    free: { concurrent: 10, name: 'Free' },
+    pro: { concurrent: 20, name: 'Pro' },
+    custom: { concurrent: 100, name: 'Custom' }  // Configurable per project
+};
+
+// Migration: Set default tier for existing projects
+ALTER TABLE projects ADD COLUMN tier TEXT DEFAULT 'free';
+ALTER TABLE projects ADD COLUMN concurrent_limit INTEGER DEFAULT 10;
+```
+
+**Concurrent Request Limits:**
 - Free: 10 concurrent requests
 - Pro: 20 concurrent requests
-- Custom: 50-100 concurrent requests
+- Custom: 50-100 concurrent requests (configurable per project)
 
 **Logic:**
 ```
@@ -141,6 +171,11 @@ fetch(providerURL, {
 2. On request end:
    - Decrement counter
    - Use waitUntil() for async cleanup
+
+3. Cleanup strategy (for crashed requests):
+   - Set TTL on counter keys (5 minutes)
+   - If request crashes, counter auto-expires
+   - Prevents counter drift from crashes
 ```
 
 **Calculation:**
@@ -177,8 +212,14 @@ fetch(providerURL, {
 
 **Storage:**
 - Cloudflare Workers Analytics (automatic, free)
+  - Retention: 24 hours on free tier, 30 days on paid
+  - Aggregation: Automatic per-minute metrics
 - Structured logs (24h retention on free tier)
+  - Retention: 24 hours (free), up to 7 days (paid)
+  - Export: Can export to external storage for longer retention
 - Aggregation: per minute/hour/day
+  - Store aggregated metrics in D1 for longer retention
+  - Daily rollups for historical trends
 
 ### 5. Structured Logging with Correlation IDs
 
@@ -240,11 +281,14 @@ logger.info({
    }
    ```
 
-2. **Provider Health:** Background checks every 5 minutes
+2. **Provider Health:** Cron Trigger checks every 5 minutes
    ```typescript
+   // Cloudflare Workers Cron Trigger
+   // wrangler.toml: [triggers.crons] = "*/5 * * * *"
    // Test each provider with simple request
    // Track: uptime, latency, error rate
    // Store in KV: provider:health:openai
+   // Export from gateway-api/src/cron/health-check.ts
    ```
 
 3. **Circuit Breaker State:** Track state transitions
@@ -262,6 +306,11 @@ logger.info({
 - Gateway error rate > 10%
 - Circuit breaker opens
 - Health check fails
+
+**Rate Limits (to prevent spam):**
+- Same alert type: max once per 5 minutes
+- Different alert types: no limit
+- Alert aggregation: Group similar alerts within 5min window
 
 ### 7. Admin Dashboard
 
@@ -317,8 +366,10 @@ Google:
 
 **Implementation:**
 - Simple HTML page with auto-refresh (30s)
-- Fetch metrics from `/api/management/metrics`
+- Fetch metrics from `/api/management/metrics` (protected endpoint)
 - No external dependencies (pure JS)
+- **Dashboard deployment:** Separate Worker endpoint, NOT integrated into Next.js dashboard UI
+- **Reasoning:** Gateway-internal metrics should be served from Gateway API for performance and reliability
 
 ## Error Handling & Recovery
 
@@ -344,10 +395,25 @@ Google:
 ### Recovery Strategies
 
 **1. Automatic Retry (with exponential backoff):**
+- **Retry happens BEFORE circuit breaker evaluation**
 - Retry transient errors (timeout, 5xx)
 - Max 3 retries per request
 - Backoff: 1s → 2s → 4s
 - Jitter to prevent thundering herd
+- **Circuit breaker tracks retry failures, not original request failures**
+- If all retries exhausted → circuit breaker evaluates the failure
+
+**Execution Order:**
+```
+1. Request → Proxy Handler
+2. Fetch from AI Provider
+3. If transient error (timeout, 5xx):
+   a. Retry with backoff (up to 3 times)
+   b. If retry succeeds → Return response
+   c. If retry fails → Increment circuit breaker failure counter
+4. Circuit breaker evaluates total failure rate
+5. If > 50% failures → OPEN circuit
+```
 
 **2. Circuit Breaker Recovery:**
 - OPEN → HALF_OPEN after 30s
@@ -394,9 +460,10 @@ apps/gateway-api/src/
 │   ├── correlation-id.ts       // NEW - Request correlation IDs
 │   └── logger.ts               // NEW - Structured logging
 ├── monitoring/
-│   ├── health-checker.ts       // NEW - Background health checks
 │   ├── metrics.ts              // NEW - Metrics storage/aggregation
 │   └── alerts.ts               // NEW - Alerting logic
+├── cron/
+│   └── health-check.ts         // NEW - Provider health checks (Cron Trigger)
 └── admin/
     ├── dashboard.ts            // NEW - Admin dashboard handler
     └── metrics-api.ts          // NEW - Metrics API endpoint
@@ -406,15 +473,16 @@ apps/gateway-api/src/
 
 ```typescript
 gateway.use('*', gatewayKeyAuth);
+gateway.use('*', correlationId);      // NEW - MUST BE FIRST for complete tracing
+gateway.use('*', metricsCollector);   // NEW - Start tracking immediately
 gateway.use('*', rateLimiter);
-gateway.use('*', bulkhead);           // NEW
-gateway.use('*', requestTimeout);     // NEW
-gateway.use('*', metricsCollector);   // NEW
-gateway.use('*', correlationId);      // NEW
+gateway.use('*', bulkhead);           // NEW - Check concurrency limits
+gateway.use('*', requestTimeout);     // NEW - Set timeout deadline
 gateway.use('*', piiScrubber);
 gateway.use('*', anomalyHandler);
 gateway.use('*', contentFilter);
-gateway.use('*', circuitBreaker);     // NEW
+gateway.use('*', circuitBreaker);     // NEW - Check provider health before proxy
+gateway.use('*', retryHandler);       // NEW - Retry BEFORE circuit breaker evaluation
 ```
 
 ### Data Flow
@@ -467,10 +535,49 @@ Log (structured)
 - Admin authentication
 
 ### Load Testing
-- Artificial traffic spike (simulate sudden traffic)
-- Sustained load test (100 req/s for 10 minutes)
-- Provider outage simulation (timeouts, errors)
-- Concurrent request limit test
+
+**Tools:**
+- **k6** - Open-source load testing tool (free)
+- **Artillery** - Alternative load testing framework
+- **wrangler** - Local development server for testing
+
+**Methodology:**
+
+1. **Sudden Traffic Spike Test:**
+   ```bash
+   # Start with 10 req/s
+   # Spike to 200 req/s over 30 seconds
+   # Hold for 2 minutes
+   # Monitor: Gateway doesn't crash, circuit breaker triggers
+   ```
+
+2. **Sustained Load Test:**
+   ```bash
+   # 100 req/s for 10 minutes
+   # Monitor: Memory usage stable, no leaks
+   # Verify: Bulkhead limits work correctly
+   ```
+
+3. **Provider Outage Simulation:**
+   ```bash
+   # Mock AI provider endpoint that returns 503
+   # Route 10% of traffic to mock provider
+   # Verify: Circuit breaker opens after 50% failures
+   # Verify: Gateway continues serving requests to healthy providers
+   ```
+
+4. **Concurrent Request Limit Test:**
+   ```bash
+   # Send 50 concurrent requests to single project (limit: 20)
+   # Verify: 20 requests process, 30 get 429
+   # Verify: Counter decrements correctly after requests complete
+   ```
+
+**Safety Precautions:**
+- Use mock provider endpoints for outage tests
+- Never test with real production provider credentials
+- Run tests during low-traffic periods
+- Have rollback plan ready (instant Cloudflare rollback)
 
 ### Testing Approach
 
@@ -546,13 +653,30 @@ Monitoring during rollout:
 
 **Expected Usage (< 100 req/s):**
 - ~8.6M requests/day (within free tier)
-- KV operations: ~17M/day (may exceed free tier)
-- Cost estimate: $5-10/month for KV overage
+- KV operations breakdown:
+  * Rate limiting: ~17M/day (existing)
+  * Circuit breaker state: ~17M reads/day + writes on state changes
+  * Bulkhead counter: ~17M reads/day + ~17M writes/day
+  * Health checks: 288 checks/day (every 5 minutes)
+  * Total: ~51M read operations/day, ~34M write operations/day
 
-**Optimization:**
-- Batch KV operations where possible
-- Use in-memory caching for frequently accessed data
-- Monitor KV usage and optimize as needed
+**Cost Estimate:**
+- Cloudflare KV Free Tier: 100K reads/day, 1K writes/day
+- Overage: ~50.9M reads + ~33.9M writes
+- KV Pricing: $0.50/M reads, $5.00/M writes
+- Estimated cost: $25.45 (reads) + $169.50 (writes) = **~$195/month**
+
+**Optimization Strategies:**
+1. **Batch KV operations** - Read multiple keys in single operation where possible
+2. **In-memory caching** - Cache circuit breaker state (check KV every 10 requests instead of every request)
+3. **Reduce bulkhead writes** - Only write on state changes, not every request
+4. **Use D1 for counters** - Move bulkhead counters to D1 (cheaper for high-volume writes)
+5. **Optimized cost** - With optimizations: **~$50-75/month**
+
+**Alternative: Stay within free tier**
+- Limit to ~50 req/s instead of 100 req/s
+- Reduce KV operations by 50%
+- Or upgrade to Cloudflare Workers Paid plan ($5/month) for higher quotas
 
 ## Security Considerations
 
