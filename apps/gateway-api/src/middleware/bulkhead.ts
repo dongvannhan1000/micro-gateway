@@ -15,16 +15,27 @@ const concurrentCounters = new Map<string, number>();
 const lastSyncTime = new Map<string, number>();
 const SYNC_INTERVAL = 30000; // 30 seconds
 const CLEANUP_INTERVAL = 300000; // 5 minutes
+let lastCleanupTime = 0;
 
 // Export for testing
 export function _resetCounters() {
     concurrentCounters.clear();
     lastSyncTime.clear();
+    lastCleanupTime = 0;
 }
 
 // Cleanup stale entries to prevent memory leaks
+// Called opportunistically on requests (not on a timer)
 function cleanupStaleEntries() {
     const now = Date.now();
+
+    // Only run cleanup every 5 minutes
+    if (lastCleanupTime + CLEANUP_INTERVAL > now) {
+        return;
+    }
+
+    lastCleanupTime = now;
+
     for (const [projectId, lastSync] of lastSyncTime.entries()) {
         const count = concurrentCounters.get(projectId) || 0;
         // Remove if zero concurrent requests and not accessed in 5 minutes
@@ -35,11 +46,6 @@ function cleanupStaleEntries() {
     }
 }
 
-// Start cleanup interval
-if (typeof setInterval !== 'undefined') {
-    setInterval(cleanupStaleEntries, CLEANUP_INTERVAL);
-}
-
 export const bulkhead: MiddlewareHandler<{ Bindings: Env; Variables: Variables }> = async (c, next) => {
     const project = c.get('project');
 
@@ -48,6 +54,9 @@ export const bulkhead: MiddlewareHandler<{ Bindings: Env; Variables: Variables }
         await next();
         return;
     }
+
+    // Opportunistically cleanup stale entries (runs every 5 minutes)
+    cleanupStaleEntries();
 
     const limit = project.concurrent_limit || 5; // Default to free tier
     const projectId = project.id;
