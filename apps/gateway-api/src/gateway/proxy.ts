@@ -5,6 +5,7 @@ import { calculateCost } from '@ms-gateway/db';
 import { decryptProviderKey } from '../utils/crypto';
 import { PricingService } from '../services/pricing-service';
 import { scrubPIIForLogging } from '../middleware/pii-scrub';
+import { logger } from '../utils/logger';
 
 const GEMINI_OPENAI_BASE_URL = 'https://generativelanguage.googleapis.com/v1beta/openai/';
 
@@ -140,6 +141,26 @@ export async function proxyHandler(c: Context<{ Bindings: Env; Variables: Variab
 
     console.log(`[Gateway] [Proxy] Target: ${providerName} | URL: ${forwardUrl.replace(/key=([^&]+)/, 'key=***REDACTED***')}`);
 
+    // Check timeout deadline before making request
+    const deadline = c.get('timeoutDeadline');
+    const correlationId = c.get('correlationId');
+
+    if (deadline && new Date() >= deadline) {
+        logger.warn({
+            correlationId,
+            event: 'timeout_before_request',
+            message: 'Request timeout exceeded before fetch'
+        });
+
+        return c.json({
+            error: {
+                message: 'Request timeout',
+                type: 'timeout',
+                code: 'request_timeout'
+            }
+        }, 408);
+    }
+
     const forwardRequest = new Request(forwardUrl, {
         method: c.req.method,
         headers,
@@ -149,7 +170,18 @@ export async function proxyHandler(c: Context<{ Bindings: Env; Variables: Variab
     const startTime = Date.now();
 
     try {
-        const response = await fetch(forwardRequest);
+        // Calculate remaining time for timeout
+        const timeout = deadline ? Math.max(0, deadline.getTime() - Date.now()) : 30000;
+
+        // Create abort controller with timeout
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), timeout);
+
+        const response = await fetch(forwardRequest, {
+            signal: controller.signal
+        });
+
+        clearTimeout(timeoutId);
         const latency = Date.now() - startTime;
 
         // Debug: Log error response body for Google (don't consume stream)
@@ -253,7 +285,24 @@ export async function proxyHandler(c: Context<{ Bindings: Env; Variables: Variab
             'X-MS-Cost-USD': cost.toFixed(6)
         });
 
-    } catch (err) {
+    } catch (err: any) {
+        // Handle timeout abort
+        if (err.name === 'AbortError') {
+            logger.warn({
+                correlationId,
+                event: 'timeout_during_request',
+                message: 'Request aborted due to timeout'
+            });
+
+            return c.json({
+                error: {
+                    message: 'Request timeout',
+                    type: 'timeout',
+                    code: 'request_timeout'
+                }
+            }, 408);
+        }
+
         console.error('[Gateway] [Proxy] Fetch error:', err);
         return openAiError(c, 'Failed to connect to AI provider', 'server_error', null, 502);
     }
