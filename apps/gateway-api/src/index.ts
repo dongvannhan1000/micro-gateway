@@ -7,6 +7,7 @@ import { injectDatabase } from './middleware/inject-db';
 import { correlationId } from './middleware/correlation-id';
 import { metricsCollector } from './middleware/metrics-collector';
 import { scheduled } from './cron/scheduled-dispatcher';
+import observabilityConfig from './admin/observability-config';
 
 const app = new Hono<{ Bindings: Env; Variables: Variables }>();
 
@@ -100,6 +101,7 @@ app.get('/health', (c) => c.json({
 app.route('/v1', gatewayRouter);        // OpenAI-compatible Proxy
 app.route('/api', publicAPIRouter);     // Public API (no auth required)
 app.route('/api', managementRouter);    // Internal Management API (requires auth)
+app.route('/', observabilityConfig);    // Observability Configuration & Business Metrics (requires admin auth)
 
 // Export default app for HTTP requests
 export default app;
