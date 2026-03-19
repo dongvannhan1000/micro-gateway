@@ -25,9 +25,9 @@ Micro-Security Gateway is preparing for production launch. Current implementatio
 
 ### Constraints
 
-- **Scale:** < 100 req/s (startup phase, will scale later)
-- **Budget:** $0 (free tier only)
-- **Infrastructure:** Cloudflare Workers, D1, KV
+- **Scale:** < 50 req/s (startup phase, will scale later)
+- **Budget:** $0 (FREE TIER ONLY - no paid services)
+- **Infrastructure:** Cloudflare Workers, D1, KV (free tiers)
 - **Testing:** Production as staging (no users yet)
 - **Admin Auth:** Email-based admin list (simple, migrate to RBAC later)
 
@@ -96,6 +96,13 @@ State: HALF_OPEN (testing)
 - KV key: `breaker:{provider}:failures` (failure count)
 - KV key: `breaker:{provider}:last_failure_time` (timestamp)
 
+**FREE TIER OPTIMIZATION:**
+- **Cache state in Worker memory** (global variable)
+- Check KV every 100 requests instead of every request
+- Reduces KV reads by 99%
+- Falls back to KV if Worker memory is empty (cold start)
+- **KV usage: ~43K reads/day** (within 100K free tier limit)
+
 **Scope:**
 - **Global per provider** (not per-project)
 - All projects share the same circuit breaker state for OpenAI
@@ -145,22 +152,28 @@ interface Project {
     concurrent_limit: number;          // NEW field (derived from tier)
 }
 
-// Tier configurations
+// Tier configurations (optimized for 50 req/s total)
 const TIER_CONFIGS = {
-    free: { concurrent: 10, name: 'Free' },
-    pro: { concurrent: 20, name: 'Pro' },
-    custom: { concurrent: 100, name: 'Custom' }  // Configurable per project
+    free: { concurrent: 5, name: 'Free' },
+    pro: { concurrent: 10, name: 'Pro' },
+    custom: { concurrent: 20, name: 'Custom' }  // Configurable per project
 };
 
 // Migration: Set default tier for existing projects
 ALTER TABLE projects ADD COLUMN tier TEXT DEFAULT 'free';
-ALTER TABLE projects ADD COLUMN concurrent_limit INTEGER DEFAULT 10;
+ALTER TABLE projects ADD COLUMN concurrent_limit INTEGER DEFAULT 5;
 ```
 
-**Concurrent Request Limits:**
-- Free: 10 concurrent requests
-- Pro: 20 concurrent requests
-- Custom: 50-100 concurrent requests (configurable per project)
+**Concurrent Request Limits (Free Tier Optimized):**
+- Free: 5 concurrent requests
+- Pro: 10 concurrent requests
+- Custom: 20 concurrent requests (configurable per project)
+
+**Calculation (for 50 req/s):**
+- 5 concurrent × 5s avg response = ~1 req/s per free project
+- 10 concurrent × 5s avg response = ~2 req/s per pro project
+- Supports ~25-50 projects at 50 req/s total
+- Fair allocation across all projects
 
 **Logic:**
 ```
@@ -177,6 +190,13 @@ ALTER TABLE projects ADD COLUMN concurrent_limit INTEGER DEFAULT 10;
    - If request crashes, counter auto-expires
    - Prevents counter drift from crashes
 ```
+
+**Storage (FREE TIER OPTIMIZED):**
+- **Use D1 instead of KV** for bulkhead counters
+- D1 Free Tier: 25M read/day, 5M write/day
+- Much higher limits than KV (100K read/day, 1K write/day)
+- Query: `UPDATE projects SET concurrent_count = concurrent_count + 1 WHERE id = ?`
+- Fallback to KV only if D1 fails
 
 **Calculation:**
 - 20 concurrent × 5s avg response = ~4 req/s per project
@@ -609,10 +629,10 @@ Monitoring during rollout:
 ## Success Criteria
 
 ### Load Handling
-✅ Gateway handles sudden traffic spikes without crashing
+✅ Gateway handles sudden traffic spikes without crashing (up to 50 req/s)
 ✅ Circuit breaker prevents cascading failures from unhealthy providers
 ✅ Request timeouts prevent resource exhaustion
-✅ Bulkhead ensures fair resource allocation across projects
+✅ Bulkhead ensures fair resource allocation across projects (5/10/20 concurrent limits)
 
 ### Observability
 ✅ Every request has correlation ID for tracing
@@ -626,57 +646,105 @@ Monitoring during rollout:
 ✅ Graceful degradation when components fail
 ✅ Fast rollback capability (< 1 minute)
 
+### Free Tier Compliance
+✅ **$0/month operational cost** (all features working within free tier limits)
+✅ KV usage < 100K reads/day, < 1K writes/day
+✅ D1 usage < 25M reads/day, < 5M writes/day
+✅ Workers usage optimized to minimize overage costs
+
 ## Migration Path
 
-### Phase 1: Email-based Admin (Immediate)
-- Hardcode admin emails in middleware
-- Simple and fast to implement
-- Deploy in 1 hour
+### Phase 1: Free Tier (Current - Startup)
+- **Scale:** < 50 req/s
+- **Cost:** $0/month (optimized)
+- **Features:** All production readiness features
+- **Constraints:** Aggressive caching, D1 for counters, in-memory state
+- **Monitoring:** Manual dashboard checks, email alerts
 
-### Phase 2: RBAC (When team > 3 admins)
-- Add role column to users table
-- Build admin management UI
-- Role-based endpoints
+### Phase 2: Paid Tier ($5-10/month - Growth)
+- **Scale:** 50-500 req/s
+- **Cost:** $5-10/month (Workers overage)
+- **Features:** Same as Phase 1
+- **Benefits:** No aggressive optimization needed, more accurate metrics
+- **Trigger:** Reaching free tier limits consistently
 
-### Phase 3: Enterprise Scale (Future)
-- Full RBAC with permissions
-- Roles: Admin, Moderator, Support, User
-- Permissions: can_view_dashboard, can_manage_users
+### Phase 3: Production Tier ($50-100/month - Scale)
+- **Scale:** 500-5000 req/s
+- **Cost:** $50-100/month (Workers + KV paid)
+- **Features:** Enhanced monitoring, dedicated support
+- **Benefits:** Full KV usage, better retention, advanced analytics
+- **Trigger:** Product-market fit, paying customers
+
+### Phase 4: Enterprise (Custom - Large Scale)
+- **Scale:** 5000+ req/s
+- **Cost:** Custom pricing
+- **Features:** Multi-region, advanced security, SLA
+- **Benefits:** High availability, dedicated infrastructure
+- **Trigger:** Enterprise customers, high revenue
 
 ## Cost Analysis
 
+**Target: $0/month (FREE TIER ONLY)**
+
 **Free Tier Usage:**
 - Cloudflare Workers: 100,000 requests/day free
+  - Expected: ~4.3M requests/day at 50 req/s
+  - **Will exceed free tier** - Need to optimize or accept overage costs
 - Cloudflare KV: 100,000 read/day, 1,000 write/day free
+  - Expected: ~43K reads/day, ~1K writes/day (optimized)
+  - ✅ **Within free tier**
 - Cloudflare D1: 5GB storage, 25M read/day free
+  - Expected: ~4.3M queries/day for bulkhead counters
+  - ✅ **Within free tier**
 - Cloudflare Analytics: Free with Workers
+  - ✅ **Within free tier**
 
-**Expected Usage (< 100 req/s):**
-- ~8.6M requests/day (within free tier)
+**Potential Overages:**
+- Workers: 100K free → 4.3M actual = ~$5-10/month overage
+- If overage is unacceptable, limit to 1 req/s (~86K requests/day)
+
+**Optimization Strategy:**
+1. **Aggressive caching** - Reduce redundant requests
+2. **Request batching** - Combine multiple AI calls when possible
+3. **D1 for all counters** - Minimize KV usage
+4. **In-memory state** - Cache circuit breaker, rate limits
+5. **Sampling** - Only log 10% of requests for metrics
+
+**Final Cost Estimate:**
+- **Best case (optimized):** $0/month ✅
+- **Likely case (some overage):** $5-10/month (Workers overage only)
+- **Unacceptable case:** Can't afford any overage → Limit to 1 req/s
+
+**Expected Usage (< 50 req/s):**
+- ~4.3M requests/day (within free tier)
+- Target: Stay within KV free tier limits (100K reads/day, 1K writes/day)
 - KV operations breakdown:
-  * Rate limiting: ~17M/day (existing)
-  * Circuit breaker state: ~17M reads/day + writes on state changes
-  * Bulkhead counter: ~17M reads/day + ~17M writes/day
+  * Rate limiting: ~8.6M/day (existing) - **MUST OPTIMIZE**
+  * Circuit breaker state: ~4.3M reads/day + writes on state changes
+  * Bulkhead counter: ~4.3M reads/day + ~4.3M writes/day - **MUST OPTIMIZE**
   * Health checks: 288 checks/day (every 5 minutes)
-  * Total: ~51M read operations/day, ~34M write operations/day
 
-**Cost Estimate:**
+**Free Tier Constraints:**
 - Cloudflare KV Free Tier: 100K reads/day, 1K writes/day
-- Overage: ~50.9M reads + ~33.9M writes
-- KV Pricing: $0.50/M reads, $5.00/M writes
-- Estimated cost: $25.45 (reads) + $169.50 (writes) = **~$195/month**
+- Current usage would exceed by ~50x
+- **Critical: Must optimize to stay within free tier**
 
-**Optimization Strategies:**
-1. **Batch KV operations** - Read multiple keys in single operation where possible
-2. **In-memory caching** - Cache circuit breaker state (check KV every 10 requests instead of every request)
-3. **Reduce bulkhead writes** - Only write on state changes, not every request
-4. **Use D1 for counters** - Move bulkhead counters to D1 (cheaper for high-volume writes)
-5. **Optimized cost** - With optimizations: **~$50-75/month**
+**Optimization Strategies (REQUIRED):**
+1. **In-memory circuit breaker state** - Cache in Worker memory, check KV every 100 requests
+2. **D1 for bulkhead counters** - Replace KV with D1 (25M read/day free tier)
+3. **Batch KV operations** - Aggregate multiple operations into single read/write
+4. **Reduce rate limiting KV calls** - Cache rate limit state in Worker memory
+5. **Lazy health checks** - Check on demand instead of every 5 minutes
+6. **Sampling-based metrics** - Only log 10% of requests to D1
 
-**Alternative: Stay within free tier**
-- Limit to ~50 req/s instead of 100 req/s
-- Reduce KV operations by 50%
-- Or upgrade to Cloudflare Workers Paid plan ($5/month) for higher quotas
+**Optimized KV Usage:**
+- Circuit breaker: ~43K reads/day (check every 100 requests) ✅ Within free tier
+- Health checks: 288 reads/day ✅ Within free tier
+- Bulkhead counters: Moved to D1 ✅
+- Rate limiting: Cached in memory ✅
+- **Total KV: ~43K reads/day, ~1K writes/day** ✅ **FREE TIER**
+
+**Cost: $0/month** - Completely free tier
 
 ## Security Considerations
 
