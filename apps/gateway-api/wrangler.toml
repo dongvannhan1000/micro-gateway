@@ -21,3 +21,10 @@ SUPABASE_URL = "https://yyfwepdlvcubthmeldir.supabase.co"
 # Scheduled Tasks: https://developers.cloudflare.com/workers/configuration/cron-triggers/
 [triggers]
 crons = ["0 0 1 * *"]
+
+# Observability - Cloudflare Workers Traces
+# Automatic instrumentation with OpenTelemetry compatibility
+# Free during beta (until March 1, 2026)
+[observability.traces]
+enabled = true
+head_sampling_rate = 0.1  # Sample 10% of requests for traces

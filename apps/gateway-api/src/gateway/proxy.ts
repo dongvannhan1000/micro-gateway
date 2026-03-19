@@ -143,7 +143,20 @@ export async function proxyHandler(c: Context<{ Bindings: Env; Variables: Variab
 
     // Check timeout deadline before making request
     const deadline = c.get('timeoutDeadline');
-    const correlationId = c.get('correlationId');
+    const correlationId = c.get('correlationId') || 'unknown';
+
+    // Add custom trace attributes for Cloudflare Workers Traces
+    // These headers will be automatically captured in trace spans
+    const traceHeaders = {
+        'X-Trace-Project-ID': project.id,
+        'X-Trace-API-Key-ID': gatewayKey.id,
+        'X-Trace-Correlation-ID': correlationId,
+        'X-Trace-Provider': providerName,
+        'X-Trace-Model': targetModel,
+    };
+
+    // Merge trace headers with provider headers
+    const headersWithTrace = { ...headers, ...traceHeaders };
 
     if (deadline && new Date() >= deadline) {
         logger.warn({
@@ -163,7 +176,7 @@ export async function proxyHandler(c: Context<{ Bindings: Env; Variables: Variab
 
     const forwardRequest = new Request(forwardUrl, {
         method: c.req.method,
-        headers,
+        headers: headersWithTrace,
         body: forwardBody,
     });
 

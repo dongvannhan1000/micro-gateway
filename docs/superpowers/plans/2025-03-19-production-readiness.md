@@ -4,11 +4,40 @@
 
 **Goal:** Add production-grade load handling and observability to Micro-Security Gateway while staying within Cloudflare free tier ($0/month).
 
-**Architecture:** Cloudflare-native approach with circuit breaker pattern, request timeouts, bulkhead concurrency limits, metrics collection with correlation IDs, structured logging, health monitoring, and admin dashboard. All optimizations to stay within free tier: D1 for counters, in-memory caching, aggressive KV reduction.
+**Architecture:** Cloudflare-native approach with circuit breaker pattern, request timeouts, bulkhead concurrency limits, business metrics collection with correlation IDs, structured logging, health monitoring, and Cloudflare Workers Traces for observability. All optimizations to stay within free tier: D1 for counters, in-memory caching, aggressive KV reduction.
 
-**Tech Stack:** Cloudflare Workers, Hono.js, TypeScript, Cloudflare D1, Cloudflare KV, Cloudflare Cron Triggers, Resend (email alerts)
+**Tech Stack:** Cloudflare Workers, Hono.js, TypeScript, Cloudflare D1, Cloudflare KV, Cloudflare Cron Triggers, Cloudflare Workers Traces (Beta), Resend (email alerts)
 
 **Spec Reference:** `docs/superpowers/specs/2025-03-19-production-readiness-design.md`
+
+---
+
+## 🔄 PIVOT: Cloudflare Workers Traces Integration (2026-03-19)
+
+**Decision:** Use Cloudflare Workers Traces (Beta) instead of custom D1-based metrics collection for observability.
+
+**Rationale:**
+- Cloudflare Workers Traces provides automatic instrumentation (fetch, KV, D1, Durable Objects)
+- OpenTelemetry-compatible export to Grafana Cloud, Honeycomb, Axiom
+- FREE during beta (until March 1, 2026)
+- No code changes required for basic traces, just enable in wrangler.toml
+
+**What Changed:**
+- ✅ **KEEP:** Circuit Breaker, Request Timeout, Bulkhead, Retry Logic, Health Checks, Business Metrics (costs/tokens)
+- ❌ **REPLACE:** Custom D1 metrics collection → Cloudflare Workers Traces
+- ❌ **REPLACE:** Custom metrics API endpoint → Export traces to observability platform
+- ⚠️ **PIVOT:** Admin dashboard → Query exported traces instead of D1 metrics
+
+**Implementation:**
+1. ✅ Enable Cloudflare Workers Traces in wrangler.toml (10% sampling)
+2. ✅ Add custom trace attributes (project_id, api_key_id, correlation_id, provider, model)
+3. ⏳ Configure trace export destination (Grafana Cloud, Honeycomb, or Axiom)
+4. ⏳ Update admin dashboard to query exported traces
+
+**Tasks Affected:**
+- ✅ Task 6 (Metrics Collector) - KEEP for business metrics only (costs, tokens)
+- ❌ Task 13 (Metrics API) - PIVOT to use Cloudflare Traces export
+- ❌ Task 14 (Admin Dashboard) - PIVOT to build on top of exported traces
 
 ---
 
