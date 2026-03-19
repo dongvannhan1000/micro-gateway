@@ -3,6 +3,7 @@ import { Env, Variables } from './types';
 import { gatewayRouter } from './gateway';
 import { managementRouter } from './management';
 import { publicAPIRouter } from './public';
+import metricsAPI from './admin/metrics-api';
 import { injectDatabase } from './middleware/inject-db';
 import { correlationId } from './middleware/correlation-id';
 import { metricsCollector } from './middleware/metrics-collector';
@@ -100,6 +101,7 @@ app.get('/health', (c) => c.json({
 app.route('/v1', gatewayRouter);        // OpenAI-compatible Proxy
 app.route('/api', publicAPIRouter);     // Public API (no auth required)
 app.route('/api', managementRouter);    // Internal Management API (requires auth)
+app.route('/', metricsAPI);             // Admin Metrics API (requires admin auth)
 
 // Export default app for HTTP requests
 export default app;
