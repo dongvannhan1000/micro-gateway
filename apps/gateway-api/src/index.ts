@@ -4,6 +4,7 @@ import { gatewayRouter } from './gateway';
 import { managementRouter } from './management';
 import { publicAPIRouter } from './public';
 import { injectDatabase } from './middleware/inject-db';
+import { correlationId } from './middleware/correlation-id';
 import { scheduled } from './cron/monthly-reset';
 
 const app = new Hono<{ Bindings: Env; Variables: Variables }>();
@@ -43,6 +44,9 @@ app.use('*', async (c, next) => {
     }
     await next();
 });
+
+// Correlation ID Middleware - MUST BE FIRST for complete request tracing
+app.use('*', correlationId);
 
 // Inject Database Repositories (available via c.get('repos'))
 app.use('*', injectDatabase);

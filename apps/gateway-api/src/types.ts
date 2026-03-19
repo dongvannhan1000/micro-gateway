@@ -12,6 +12,7 @@ export interface Env {
 }
 
 export interface Variables {
+    correlationId?: string; // Request tracing ID
     user?: {
         id: string;
         email?: string;
