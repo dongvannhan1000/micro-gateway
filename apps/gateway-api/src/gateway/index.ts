@@ -7,6 +7,7 @@ import { requestTimeout } from '../middleware/request-timeout';
 import { contentFilter } from '../middleware/content-filter';
 import { anomalyHandler } from '../middleware/anomaly-handler';
 import { piiScrubber } from '../middleware/pii-scrub';
+import { circuitBreaker } from '../middleware/circuit-breaker';
 import { proxyHandler } from './proxy';
 
 const gateway = new Hono<{ Bindings: Env; Variables: Variables }>();
@@ -19,6 +20,7 @@ gateway.use('*', requestTimeout({ timeout: 30000 })); // 30s timeout
 gateway.use('*', piiScrubber); // PII scrubbing before anomaly detection and content filtering
 gateway.use('*', anomalyHandler);
 gateway.use('*', contentFilter);
+gateway.use('*', circuitBreaker); // Check provider health before proxy
 
 gateway.post('/chat/completions', proxyHandler);
 gateway.post('/completions', proxyHandler); // Legacy support
