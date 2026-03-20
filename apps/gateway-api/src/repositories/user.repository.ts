@@ -431,7 +431,7 @@ export class UsageRepository {
     const byProvider: Record<string, any> = {};
     byProviderResults.forEach(row => {
       if (row.provider) {
-        byProvider[row.provider] = row;
+        byProvider[row.provider as string] = row;
       }
     });
 
@@ -458,7 +458,7 @@ export class UsageRepository {
       endDate,
       summary: summaryResult || {},
       byProvider,
-      byModel: {}, // TODO: Implement model breakdown
+      byModel: {} as Record<string, any>, // TODO: Implement model breakdown
       dailyBreakdown
     };
   }
@@ -470,6 +470,7 @@ export class UsageRepository {
   async getLast30DaysMetrics(userId: string, projectId?: string): Promise<{
     summary: any;
     byProvider: any;
+    byModel: any;
     dailyBreakdown: any[];
   }> {
     // Calculate last 30 days
@@ -519,8 +520,8 @@ export class UsageRepository {
 
     return {
       summary: summaryResult || {},
-      byProvider: {},
-      byModel: {},
+      byProvider: {} as Record<string, any>,
+      byModel: {} as Record<string, any>,
       dailyBreakdown
     };
   }
@@ -531,6 +532,7 @@ export class UsageRepository {
   async getAllTimeMetrics(userId: string, projectId?: string): Promise<{
     summary: any;
     byProvider: any;
+    byModel: any;
     dailyBreakdown: any[];
   }> {
     // Join request_logs with projects to filter by user_id - NO date filter
@@ -573,8 +575,8 @@ export class UsageRepository {
 
     return {
       summary: summaryResult || {},
-      byProvider: {},
-      byModel: {},
+      byProvider: {} as Record<string, any>,
+      byModel: {} as Record<string, any>,
       dailyBreakdown
     };
   }

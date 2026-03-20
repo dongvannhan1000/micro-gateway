@@ -39,7 +39,7 @@ profile.get('/profile', async (c) => {
       try {
         await repos.userProfile.create({
           id: user.id,
-          email: user.email,
+          email: user.email || '',
           displayName: user.email?.split('@')[0] || 'User', // Default display name from email
         });
 

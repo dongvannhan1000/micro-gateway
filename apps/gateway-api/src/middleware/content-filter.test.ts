@@ -18,7 +18,8 @@ vi.mock('../security/injection-scorer', () => ({
 function createMockContext(
     gatewayKey: any = {},
     project: any = {},
-    requestBody: any = null
+    requestBody: any = null,
+    method: string = 'POST'
 ): Context<{ Bindings: Env; Variables: Variables }> {
     const mockRepos = {
         requestLog: {
@@ -33,7 +34,7 @@ function createMockContext(
 
     const mockCtx = {
         req: {
-            method: 'POST',
+            method,
             json: vi.fn().mockResolvedValue(requestBody)
         },
         get: vi.fn((key) => {
@@ -155,9 +156,9 @@ describe('Content Filter Middleware', () => {
             const mockCtx = createMockContext(
                 createMockGatewayKey(),
                 createMockProject(),
-                null
+                null,
+                'GET'
             );
-            mockCtx.req.method = 'GET';
             const mockNext = createMockNext();
 
             await contentFilter(mockCtx, mockNext);

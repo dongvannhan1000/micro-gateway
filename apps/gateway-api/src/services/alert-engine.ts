@@ -37,11 +37,11 @@ export async function checkAlerts(
                     WHERE project_id = ? AND status = 'active'
                 `).bind(projectId).first();
 
-                totalUsage = result?.total_usage || 0;
+                totalUsage = (result?.total_usage as number) || 0;
             } else {
                 // scope === 'key' - check specific key only
-                const key = await repos.gatewayKey.findById(rule.gateway_key_id);
-                totalUsage = key?.current_month_usage_usd || 0;
+                const key = await repos.gatewayKey.findById(rule.gateway_key_id, projectId);
+                totalUsage = (key?.current_month_usage_usd as number) || 0;
             }
 
             // Handle Cost Threshold Alerts

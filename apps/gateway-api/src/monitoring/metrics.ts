@@ -79,7 +79,7 @@ export async function getProjectMetrics(
         return {
             totalRequests: result?.total_requests as number || 0,
             avgDuration: result?.avg_duration as number || 0,
-            errorRate: result?.total_requests > 0
+            errorRate: (result?.total_requests as number) > 0
                 ? (result?.errors as number || 0) / (result?.total_requests as number)
                 : 0,
             totalCost: result?.total_cost as number || 0

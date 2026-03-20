@@ -15,7 +15,7 @@ export function generateCorrelationId(): string {
 export function getCorrelationId(context: Map<string, unknown> | Context): string {
     // Handle Hono Context
     if ('get' in context && typeof context.get === 'function') {
-        let id = context.get<string>('correlationId');
+        let id = context.get<string>('correlationId') as string | undefined;
         if (!id) {
             id = generateCorrelationId();
             context.set('correlationId', id);

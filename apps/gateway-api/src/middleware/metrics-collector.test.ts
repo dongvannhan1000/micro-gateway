@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { Hono } from 'hono';
 import { metricsCollector } from './metrics-collector';
-import { Env } from '../types';
+import { Env, Variables } from '../types';
 
 describe('Metrics Collector Middleware', () => {
     let mockEnv: Env;
@@ -21,13 +21,13 @@ describe('Metrics Collector Middleware', () => {
         // Mock Math.random to always pass the 10% sampling check
         const randomSpy = vi.spyOn(Math, 'random').mockReturnValue(0.05);
 
-        const app = new Hono<{ Bindings: Env }>();
+        const app = new Hono<{ Bindings: Env; Variables: Variables }>();
 
         // Add a middleware to set context values before metrics collector runs
         app.use('*', async (c, next) => {
             c.set('correlationId', 'corr-123');
-            c.set('project', { id: 'proj-123' });
-            c.set('gatewayKey', { id: 'key-123' });
+            c.set('project', { id: 'proj-123' } as any);
+            c.set('gatewayKey', { id: 'key-123' } as any);
             await next();
         });
 
@@ -54,7 +54,7 @@ describe('Metrics Collector Middleware', () => {
             }
         } as unknown as Env;
 
-        const app = new Hono<{ Bindings: Env }>();
+        const app = new Hono<{ Bindings: Env; Variables: Variables }>();
         app.use('*', metricsCollector);
 
         app.get('/test', (c) => c.text('OK'));

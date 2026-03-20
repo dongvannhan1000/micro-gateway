@@ -14,7 +14,7 @@ const mockProject: Partial<Project> = {
     id: 'test-project-id',
     pii_scrubbing_enabled: 1,
     pii_scrubbing_level: 'medium',
-    pii_custom_patterns: null
+    pii_custom_patterns: undefined
 };
 
 // Mock project with PII scrubbing disabled
@@ -22,7 +22,7 @@ const mockProjectDisabled: Partial<Project> = {
     id: 'test-project-id',
     pii_scrubbing_enabled: 0,
     pii_scrubbing_level: 'medium',
-    pii_custom_patterns: null
+    pii_custom_patterns: undefined
 };
 
 function createMockContext(project: Partial<Project>, requestBody: any = {}) {

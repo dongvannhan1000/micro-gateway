@@ -3,7 +3,7 @@ import { describe, it, expect } from 'vitest';
 describe('Provider Authentication', () => {
     describe('Header Generation Logic', () => {
         it('should generate Bearer token for OpenAI', () => {
-            const providerName = 'openai';
+            const providerName: string = 'openai';
             const providerKey = 'sk-test-key';
             const headers: Record<string, string> = {
                 'Content-Type': 'application/json',
@@ -78,7 +78,7 @@ describe('Provider Authentication', () => {
         });
 
         it('should generate Bearer token for Groq', () => {
-            const providerName = 'groq';
+            const providerName: string = 'groq';
             const providerKey = 'gsk-test-key';
             const headers: Record<string, string> = {
                 'Content-Type': 'application/json',
@@ -97,7 +97,7 @@ describe('Provider Authentication', () => {
         });
 
         it('should generate Bearer token for Together', () => {
-            const providerName = 'together';
+            const providerName: string = 'together';
             const providerKey = 'together-test-key';
             const headers: Record<string, string> = {
                 'Content-Type': 'application/json',
@@ -116,7 +116,7 @@ describe('Provider Authentication', () => {
         });
 
         it('should generate Bearer token for DeepSeek', () => {
-            const providerName = 'deepseek';
+            const providerName: string = 'deepseek';
             const providerKey = 'sk-deepseek-key';
             const headers: Record<string, string> = {
                 'Content-Type': 'application/json',
@@ -135,7 +135,7 @@ describe('Provider Authentication', () => {
         });
 
         it('should use fallback for unknown providers', () => {
-            const providerName = 'unknown-provider';
+            const providerName: string = 'unknown-provider';
             const providerKey = 'unknown-key';
             const headers: Record<string, string> = {
                 'Content-Type': 'application/json',

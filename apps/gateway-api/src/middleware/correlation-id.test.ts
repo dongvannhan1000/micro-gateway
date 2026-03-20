@@ -1,10 +1,11 @@
 import { describe, it, expect } from 'vitest';
 import { Hono } from 'hono';
 import { correlationId } from './correlation-id';
+import { Variables } from '../types';
 
 describe('Correlation ID Middleware', () => {
     it('should generate correlation ID for new request', async () => {
-        const app = new Hono();
+        const app = new Hono<{ Variables: Variables }>();
         app.use('*', correlationId);
 
         app.get('/test', (c) => {
@@ -19,7 +20,7 @@ describe('Correlation ID Middleware', () => {
     });
 
     it('should include correlation ID in response header', async () => {
-        const app = new Hono();
+        const app = new Hono<{ Variables: Variables }>();
         app.use('*', correlationId);
 
         app.get('/test', (c) => c.text('OK'));
@@ -30,7 +31,7 @@ describe('Correlation ID Middleware', () => {
     });
 
     it('should preserve existing correlation ID from request header', async () => {
-        const app = new Hono();
+        const app = new Hono<{ Variables: Variables }>();
         app.use('*', correlationId);
 
         app.get('/test', (c) => {

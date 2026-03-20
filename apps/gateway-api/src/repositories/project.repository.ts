@@ -100,7 +100,7 @@ export class ProjectRepository {
       `SELECT COUNT(*) as count FROM projects WHERE user_id = ?`,
       [userId]
     );
-    return results[0]?.count || 0;
+    return (results[0] as { count: number } | undefined)?.count || 0;
   }
 
   async findNameById(id: string): Promise<{ name: string } | null> {

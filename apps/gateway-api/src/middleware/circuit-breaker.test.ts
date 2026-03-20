@@ -19,7 +19,7 @@ describe('Circuit Breaker Middleware', () => {
 
     // Global error handler to mark errors in context for circuit breaker
     // This must be added to the app before any tests that throw errors
-    function withErrorMarking(app: Hono) {
+    function withErrorMarking(app: Hono<{ Bindings: Env; Variables: Variables }>) {
         app.onError((err, c) => {
             // Mark error in context so circuit breaker can detect it
             c.set('requestError', err);
@@ -41,7 +41,7 @@ describe('Circuit Breaker Middleware', () => {
         const res = await app.request(req);
         expect(res.status).toBe(200);
 
-        const body = await res.json();
+        const body = await res.json() as { status: string };
         expect(body.status).toBe('ok');
     });
 
@@ -94,7 +94,7 @@ describe('Circuit Breaker Middleware', () => {
         expect(res.headers.get('X-Circuit-State')).toBe('OPEN');
         expect(res.headers.get('X-Circuit-Provider')).toBe('openai');
 
-        const body = await res.json();
+        const body = await res.json() as { error: { type: string; code: string; message: string } };
         expect(body.error.type).toBe('service_unavailable');
         expect(body.error.code).toBe('circuit_breaker_open');
         expect(body.error.message).toContain('Circuit breaker is OPEN');

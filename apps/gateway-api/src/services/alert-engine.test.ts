@@ -105,7 +105,7 @@ describe('AlertEngine - Hybrid Scope', () => {
         // Expect NO alert ($8 < $10)
         await checkAlerts(mockContext, 'project-123', 5);
 
-        expect(mockRepos.gatewayKey.findById).toHaveBeenCalledWith('key-123');
+        expect(mockRepos.gatewayKey.findById).toHaveBeenCalledWith('key-123', 'project-123');
         expect(mockRepos.alert.createHistory).not.toHaveBeenCalled();
     });
 
@@ -133,7 +133,7 @@ describe('AlertEngine - Hybrid Scope', () => {
         // Expect alert ($12 > $10)
         await checkAlerts(mockContext, 'project-123', 5);
 
-        expect(mockRepos.gatewayKey.findById).toHaveBeenCalledWith('key-456');
+        expect(mockRepos.gatewayKey.findById).toHaveBeenCalledWith('key-456', 'project-123');
         expect(mockRepos.alert.createHistory).toHaveBeenCalled();
         expect(mockKV.put).toHaveBeenCalled(); // Cooldown set
     });
@@ -154,7 +154,7 @@ describe('AlertEngine - Hybrid Scope', () => {
 
     it('should handle injection_detected alerts unchanged', async () => {
         // Setup: High injection score
-        mockContext.get.mockImplementation((key) => {
+        mockContext.get.mockImplementation((key: string) => {
             if (key === 'repos') return mockRepos;
             if (key === 'gatewayKey') return { current_month_usage_usd: 5 };
             if (key === 'promptInjectionScore') return 0.8;

@@ -1,14 +1,15 @@
 import { describe, it, expect, vi } from 'vitest';
 import { Hono } from 'hono';
 import { requestTimeout } from './request-timeout';
+import { Variables } from '../types';
 
 describe('Request Timeout Middleware', () => {
     it('should set timeout deadline in context', async () => {
-        const app = new Hono();
+        const app = new Hono<{ Variables: Variables }>();
         app.use('*', requestTimeout({ timeout: 5000 }));
 
         app.get('/test', (c) => {
-            const deadline = c.get('timeoutDeadline');
+            const deadline = c.get('timeoutDeadline') as Date;
             expect(deadline).toBeDefined();
             expect(deadline).toBeInstanceOf(Date);
             return c.text('OK');
@@ -20,11 +21,11 @@ describe('Request Timeout Middleware', () => {
     });
 
     it('should use default 30s timeout if not specified', async () => {
-        const app = new Hono();
+        const app = new Hono<{ Variables: Variables }>();
         app.use('*', requestTimeout());
 
         app.get('/test', (c) => {
-            const deadline = c.get('timeoutDeadline');
+            const deadline = c.get('timeoutDeadline') as Date;
             const now = new Date();
             const diff = deadline.getTime() - now.getTime();
 
@@ -41,7 +42,7 @@ describe('Request Timeout Middleware', () => {
     });
 
     it('should enforce timeout and return 408 when deadline exceeded before fetch', async () => {
-        const app = new Hono();
+        const app = new Hono<{ Variables: Variables }>();
 
         app.use('*', requestTimeout({ timeout: 100 }));
 
@@ -50,7 +51,7 @@ describe('Request Timeout Middleware', () => {
             await new Promise(resolve => setTimeout(resolve, 150));
 
             // Check timeout deadline before making fetch
-            const deadline = c.get('timeoutDeadline');
+            const deadline = c.get('timeoutDeadline') as Date | undefined;
             if (deadline && new Date() >= deadline) {
                 return c.json({
                     error: {
@@ -71,19 +72,19 @@ describe('Request Timeout Middleware', () => {
 
         expect(res.status).toBe(408);
 
-        const body = await res.json();
+        const body = await res.json() as { error: { type: string; code: string } };
         expect(body.error).toBeDefined();
         expect(body.error.type).toBe('timeout');
         expect(body.error.code).toBe('request_timeout');
     });
 
     it('should enforce timeout and return 408 when abort triggered during fetch', async () => {
-        const app = new Hono();
+        const app = new Hono<{ Variables: Variables }>();
 
         app.use('*', requestTimeout({ timeout: 100 }));
 
         app.post('/test', async (c) => {
-            const deadline = c.get('timeoutDeadline');
+            const deadline = c.get('timeoutDeadline') as Date | undefined;
             const timeout = deadline ? Math.max(0, deadline.getTime() - Date.now()) : 30000;
 
             const controller = new AbortController();
@@ -121,7 +122,7 @@ describe('Request Timeout Middleware', () => {
 
         expect(res.status).toBe(408);
 
-        const body = await res.json();
+        const body = await res.json() as { error: { type: string; code: string } };
         expect(body.error).toBeDefined();
         expect(body.error.type).toBe('timeout');
         expect(body.error.code).toBe('request_timeout');

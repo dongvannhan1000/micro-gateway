@@ -40,7 +40,7 @@ export class GatewayKeyRepository {
        WHERE p.user_id = ? AND k.status = 'active'`,
       [userId]
     );
-    return results[0]?.count || 0;
+    return (results[0] as { count: number } | undefined)?.count || 0;
   }
 
   async findByProject(projectId: string, userId: string): Promise<any[]> {

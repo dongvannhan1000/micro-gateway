@@ -85,7 +85,7 @@ describe('Bulkhead Middleware', () => {
         const res = await app.request('/test', {}, mockEnvBlocked);
 
         expect(res.status).toBe(429);
-        const data = await res.json();
+        const data = await res.json() as { error: { message: string } };
         expect(data.error.message).toContain('Too many concurrent requests');
     });
 

@@ -31,5 +31,8 @@ export interface Variables {
     piiRawRequest?: string; // Raw request body for lazy scrubbing
     piiRawResponse?: string; // Raw response body for lazy scrubbing
     timeoutDeadline?: Date; // Request timeout deadline
+    provider?: string; // AI provider name (openai, anthropic, google, etc.)
+    model?: string; // AI model name (gpt-4, claude-3-opus, etc.)
+    requestError?: Error; // Captured request error for circuit breaker
 }
 

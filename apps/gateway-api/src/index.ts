@@ -27,7 +27,7 @@ app.use('*', async (c, next) => {
         c.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
         c.header('Access-Control-Allow-Headers', 'Content-Type, Authorization');
       }
-      return c.text('', 204);
+      return c.newResponse(null, 204);
     }
 
     if (!isBootstrapped) {
