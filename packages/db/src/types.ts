@@ -70,12 +70,30 @@ export interface AlertRule {
     id: string;
     project_id: string;
     type: 'cost_threshold' | 'injection_detected' | 'rate_limit_hit';
+    scope: 'project' | 'key';      // NEW - Required field
+    gateway_key_id?: string;       // NEW - Required when scope='key'
     threshold?: number;
     action: 'email' | 'webhook' | 'block';
     target?: string;
     is_enabled: boolean;
     created_at: string;
 }
+
+export interface CreateAlertRuleDTO {
+    type: 'cost_threshold' | 'injection_detected' | 'rate_limit_hit';
+    scope: 'project' | 'key';
+    gateway_key_id?: string;       // Required when scope='key'
+    threshold?: number;
+    action: 'email' | 'webhook' | 'block';
+    target?: string;
+}
+
+export interface AlertValidationError {
+    field: string;
+    message: string;
+}
+
+export type AlertScope = 'project' | 'key';
 
 export interface AlertHistory {
     id: string;
