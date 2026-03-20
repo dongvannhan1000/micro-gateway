@@ -28,15 +28,12 @@
 - ✅ **OpenAI-compatible API** - Drop-in replacement for OpenAI SDKs
 - ✅ **Security hardened** - JWT validation, IP rate limiting, race condition protection
 
-### 🚀 Production-Ready Resilience (NEW!)
+### 🚀 Production-Ready Resilience
 
 - ✅ **Circuit Breaker** - Prevent cascading failures with per-project/per-provider circuit breakers
 - ✅ **Request Timeout** - 30s max timeout with configurable deadlines
 - ✅ **Bulkhead Pattern** - Concurrency limits via D1 database
 - ✅ **Retry Logic** - 3 retries with exponential backoff for transient failures
-- ✅ **Provider Health Monitoring** - Automated health checks every 5 minutes
-- ✅ **Observability** - Cloudflare Workers Traces integration (Grafana/Honeycomb/Axiom)
-- ✅ **Admin Dashboard** - Real-time metrics and provider health monitoring
 - ✅ **Load Testing** - Comprehensive k6 load tests for performance validation
 
 ---
@@ -106,10 +103,6 @@ Cloudflare Workers (Edge)
 │   │   ├── Rate limiting (KV)
 │   │   ├── Anomaly detection
 │   │   └── PII scrubbing
-│   ├── Observability
-│   │   ├── Cloudflare Workers Traces (10% sampling)
-│   │   ├── Provider health monitoring (cron)
-│   │   └── Admin dashboard (real-time metrics)
 │   └── Multi-provider routing
 │       ├── OpenAI, Anthropic, Google
 │       └── DeepSeek, Groq, Together AI
@@ -186,74 +179,10 @@ curl https://your-gateway.workers.dev/v1/chat/completions \
 
 ---
 
-## Monitoring & Observability
-
-### Cloudflare Workers Traces
-
-Request metrics are automatically collected and exported to your observability platform:
-
-**Supported Platforms**:
-- Grafana Cloud (recommended)
-- Honeycomb
-- Axiom
-
-**Setup**:
-```bash
-# Configure OTLP export endpoint
-wrangler secret put OTEL_EXPORTER_OTLP_ENDPOINT
-wrangler secret put OTEL_EXPORTER_OTLP_HEADERS
-```
-
-**Custom Trace Attributes**:
-- `project_id` - Project identifier
-- `api_key_id` - Gateway key used
-- `correlation_id` - Request correlation ID
-- `provider` - AI provider (openai, anthropic, etc.)
-- `model` - Model requested
-
-### Admin Dashboard
-
-Real-time monitoring dashboard at `/admin` (requires admin authentication):
-
-**Business Metrics**:
-- Total requests, costs, tokens
-- Average latency
-- Active projects
-
-**Provider Health**:
-- Status (healthy/degraded/down)
-- Latency, error rate, uptime
-
-**Integration**:
-- Direct links to Grafana/Honeycomb/Axiom dashboards
-- Auto-refresh every 30 seconds
-
-### Provider Health Monitoring
-
-Automated health checks run every 5 minutes via Cloudflare Workers Cron:
-
-- Tests each provider with actual API calls
-- Measures latency and success rate
-- Stores results in KV for dashboard
-- Automatic alerting on failures
-
----
-
 ## Documentation
 
-### Deployment & Operations
 - [**SELF_HOSTED.md**](./SELF_HOSTED.md) - Deployment guide
-- [**docs/production-rollout-plan.md**](./docs/production-rollout-plan.md) - Gradual rollout strategy
-- [**docs/production-runbook.md**](./docs/production-runbook.md) - Operations runbook
-- [**docs/pre-production-checklist.md**](./docs/pre-production-checklist.md) - Pre-deployment checklist
-
-### Observability
-- [**apps/gateway-api/docs/observability-setup.md**](./apps/gateway-api/docs/observability-setup.md) - Cloudflare Traces setup
-- [**apps/gateway-api/load-tests/README.md**](./apps/gateway-api/load-tests/README.md) - Load testing guide
-
-### Security
 - [**SECURITY.md**](./SECURITY.md) - Security architecture
-- [**docs/security-fixes-architectural-review.md**](./docs/security-fixes-architectural-review.md) - Security audit results
 - [**CONTRIBUTING.md**](./CONTRIBUTING.md) - Contribution guidelines
 - [**LICENSE**](./LICENSE) - MIT License
 
@@ -282,13 +211,6 @@ Automated health checks run every 5 minutes via Cloudflare Workers Cron:
 - Request timeout protects against slow providers
 - Bulkhead limits concurrency per project
 - Retry logic handles transient failures
-- Provider health monitoring ensures availability
-
-**Observability**: Complete monitoring stack
-- Cloudflare Workers Traces (10% sampling)
-- Admin dashboard with real-time metrics
-- Provider health monitoring (5-min intervals)
-- Automated health reports
 
 **Deployment**: Safe, gradual rollout
 - Pre-deployment validation (87 checks)
@@ -296,32 +218,6 @@ Automated health checks run every 5 minutes via Cloudflare Workers Cron:
 - Canary deployment (10% → 50% → 100%)
 - Automated rollback triggers
 - Comprehensive runbook
-
-### 📊 Production Rollout Plan
-
-1. **Pre-Production** (87 checks)
-   - Code quality validation
-   - Database migration verification
-   - Security audit
-   - Performance baseline
-
-2. **Phase 1**: 10% traffic (30 min monitoring)
-   - Monitor error rate (< 5%)
-   - Check P95 latency (< 2000ms)
-   - Verify circuit breaker state
-   - Validate provider health
-
-3. **Phase 2**: 50% traffic (1 hour monitoring)
-   - Continued monitoring
-   - Cost tracking validation
-   - Alert verification
-
-4. **Phase 3**: 100% traffic (24 hour monitoring)
-   - Full production monitoring
-   - Daily health reports
-   - Performance optimization
-
-See [**docs/production-rollout-plan.md**](./docs/production-rollout-plan.md) for complete rollout strategy.
 
 ---
 

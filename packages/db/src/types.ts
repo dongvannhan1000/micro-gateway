@@ -32,6 +32,7 @@ export interface GatewayKey {
     rate_limit_per_day: number;  // Default: 3000 (Free tier)
     created_at: string;
     revoked_at?: string;
+    user_id?: string; // NEW: Direct user reference for admin operations
 }
 
 export interface ProviderConfig {
@@ -105,6 +106,8 @@ export interface ModelPricing {
 export interface User {
     id: string;
     email: string;
+    role?: 'admin' | 'user'; // NEW: Role-based access control
+    password_hash?: string; // NEW: For local authentication
     display_name?: string;
     avatar_url?: string;
     bio?: string;
