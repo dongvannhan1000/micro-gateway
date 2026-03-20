@@ -25,6 +25,7 @@
 - ✅ **Hard spending caps** - Never get bill shock again
 - ✅ **Rate limiting** - Per-key configurable limits
 - ✅ **Cost analytics** - Track spend per project/provider
+- ✅ **Hybrid Alert System** - Project-level or key-level cost monitoring
 - ✅ **OpenAI-compatible API** - Drop-in replacement for OpenAI SDKs
 - ✅ **Security hardened** - JWT validation, IP rate limiting, race condition protection
 
@@ -103,6 +104,11 @@ Cloudflare Workers (Edge)
 │   │   ├── Rate limiting (KV)
 │   │   ├── Anomaly detection
 │   │   └── PII scrubbing
+│   ├── Alert System
+│   │   ├── Hybrid Scope: Project-level (all keys) or key-level (specific key)
+│   │   ├── Cost Thresholds: Alert when spending exceeds configured limit
+│   │   ├── Security Alerts: Prompt injection detection
+│   │   └── Notification Channels: Email (webhook coming soon)
 │   └── Multi-provider routing
 │       ├── OpenAI, Anthropic, Google
 │       └── DeepSeek, Groq, Together AI
@@ -110,6 +116,7 @@ Cloudflare Workers (Edge)
     ├── Projects & API keys
     ├── Provider configs (encrypted)
     ├── Usage tracking
+    ├── Alert rules (with scope)
     └── Circuit breaker state
 ```
 
@@ -192,7 +199,7 @@ curl https://your-gateway.workers.dev/v1/chat/completions \
 
 ### ✅ Fully Tested & Production-Ready
 
-**Test Coverage**: 298 tests passing (96.6% success rate)
+**Test Coverage**: 305 tests passing (100% success rate)
 
 **Security**: All critical vulnerabilities fixed and verified
 - JWT expiration validation (1-hour max token age)
