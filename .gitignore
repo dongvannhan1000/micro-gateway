@@ -35,6 +35,7 @@ research
 security-assessment
 legal
 TESTING.md
+.archive
 .claude/settings.local.json
 
 # Test Files & Results (local development)
