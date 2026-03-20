@@ -5,11 +5,9 @@ const alerts = new Hono<{ Bindings: Env; Variables: Variables }>();
 
 // GET /projects/:id/alerts
 alerts.get('/', async (c) => {
-    console.log('[Alerts] GET / called with path:', c.req.path);
     const user = c.get('user')!;
     const repos = c.get('repos')!;
     const projectId = c.req.param('projectId')!;
-    console.log('[Alerts] Project ID:', projectId);
 
     try {
         const results = await repos.alert.findRulesByProject(projectId, user.id);
