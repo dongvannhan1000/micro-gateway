@@ -23,11 +23,26 @@ export async function checkAlerts(
         // 2. Fetch project details (for name and total usage)
         const project = await repos.project.findNameById(projectId);
 
-        const totalUsage = c.get('gatewayKey')?.current_month_usage_usd || 0;
-
         for (const rule of rules as any[]) {
             let shouldTrigger = false;
             let message = '';
+            let totalUsage = 0;
+
+            // Calculate usage based on scope
+            if (rule.scope === 'project') {
+                // Sum all keys' usage for this project
+                const result = await c.env.DB.prepare(`
+                    SELECT SUM(current_month_usage_usd) as total_usage
+                    FROM gateway_keys
+                    WHERE project_id = ? AND status = 'active'
+                `).bind(projectId).first();
+
+                totalUsage = result?.total_usage || 0;
+            } else {
+                // scope === 'key' - check specific key only
+                const key = await repos.gatewayKey.findById(rule.gateway_key_id);
+                totalUsage = key?.current_month_usage_usd || 0;
+            }
 
             // Handle Cost Threshold Alerts
             if (rule.type === 'cost_threshold' && totalUsage >= rule.threshold) {
