@@ -83,12 +83,12 @@ management.post('/projects', async (c) => {
     }
 });
 
-management.get('/projects/:id', async (c) => {
+management.get('/projects/:projectId', async (c) => {
     const user = c.get('user')!;
     const repos = c.get('repos')!;
-    const id = c.req.param('id');
+    const projectId = c.req.param('projectId');
     try {
-        const project = await repos.project.findByIdAndUser(id, user.id);
+        const project = await repos.project.findByIdAndUser(projectId, user.id);
         if (!project) return c.json({ error: 'Project not found' }, 404);
         return c.json(project);
     } catch (err) {
@@ -97,10 +97,10 @@ management.get('/projects/:id', async (c) => {
     }
 });
 
-management.put('/projects/:id', async (c) => {
+management.put('/projects/:projectId', async (c) => {
     const user = c.get('user')!;
     const repos = c.get('repos')!;
-    const id = c.req.param('id');
+    const projectId = c.req.param('projectId');
     const { name, description, model_aliases, pii_scrubbing_level, pii_scrubbing_enabled } = await c.req.json();
 
     // Validate pii_scrubbing_level if provided
@@ -109,7 +109,7 @@ management.put('/projects/:id', async (c) => {
     }
 
     try {
-        const changes = await repos.project.update(id, user.id, {
+        const changes = await repos.project.update(projectId, user.id, {
             name,
             description,
             model_aliases,
@@ -126,10 +126,10 @@ management.put('/projects/:id', async (c) => {
 
 // --- Provider Configs ---
 
-management.get('/projects/:id/provider-configs', async (c) => {
+management.get('/projects/:projectId/provider-configs', async (c) => {
     const user = c.get('user')!;
     const repos = c.get('repos')!;
-    const projectId = c.req.param('id');
+    const projectId = c.req.param('projectId');
     try {
         const results = await repos.providerConfig.findByProject(projectId, user.id);
         return c.json(results);
@@ -138,10 +138,10 @@ management.get('/projects/:id/provider-configs', async (c) => {
     }
 });
 
-management.post('/projects/:id/provider-configs', async (c) => {
+management.post('/projects/:projectId/provider-configs', async (c) => {
     const user = c.get('user')!;
     const repos = c.get('repos')!;
-    const projectId = c.req.param('id');
+    const projectId = c.req.param('projectId');
     const { provider, api_key } = await c.req.json();
 
     if (!provider || !api_key) return c.json({ error: 'Missing provider or key' }, 400);
@@ -179,10 +179,10 @@ management.post('/projects/:id/provider-configs', async (c) => {
     }
 });
 
-management.delete('/projects/:id/provider-configs/:provider', async (c) => {
+management.delete('/projects/:projectId/provider-configs/:provider', async (c) => {
     const user = c.get('user')!;
     const repos = c.get('repos')!;
-    const { id: projectId, provider } = c.req.param();
+    const { projectId, provider } = c.req.param();
 
     try {
         const changes = await repos.providerConfig.delete(projectId, provider, user.id);
@@ -196,10 +196,10 @@ management.delete('/projects/:id/provider-configs/:provider', async (c) => {
 
 // --- Gateway Keys ---
 
-management.get('/projects/:id/gateway-keys', async (c) => {
+management.get('/projects/:projectId/gateway-keys', async (c) => {
     const user = c.get('user')!;
     const repos = c.get('repos')!;
-    const projectId = c.req.param('id');
+    const projectId = c.req.param('projectId');
 
     try {
         const results = await repos.gatewayKey.findByProject(projectId, user.id);
@@ -209,10 +209,10 @@ management.get('/projects/:id/gateway-keys', async (c) => {
     }
 });
 
-management.post('/projects/:id/gateway-keys', async (c) => {
+management.post('/projects/:projectId/gateway-keys', async (c) => {
     const user = c.get('user')!;
     const repos = c.get('repos')!;
-    const projectId = c.req.param('id');
+    const projectId = c.req.param('projectId');
     const { name, monthly_limit_usd, rate_limit_per_min, rate_limit_per_day } = await c.req.json();
 
     // Verify project ownership
