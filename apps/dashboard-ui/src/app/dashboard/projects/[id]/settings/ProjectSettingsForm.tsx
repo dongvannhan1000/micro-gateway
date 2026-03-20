@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { deleteProviderConfig, saveProviderConfig, updateProjectSettings } from '@/app/dashboard/actions';
+import { AlertsTab } from '@/components/AlertsTab';
 import {
     Loader2,
     ShieldCheck,
@@ -17,11 +18,12 @@ import {
     Lock,
     Eye,
     EyeOff,
-    RefreshCw
+    RefreshCw,
+    Bell
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
-type TabType = 'general' | 'providers' | 'aliases' | 'privacy';
+type TabType = 'general' | 'providers' | 'aliases' | 'privacy' | 'alerts';
 
 // API Key Input Component with Show/Hide Toggle
 function ApiKeyInput({
@@ -68,7 +70,8 @@ export function ProjectSettingsForm({
     currentAliases,
     piiScrubbingLevel,
     piiScrubbingEnabled,
-    defaultTab
+    defaultTab,
+    token
 }: {
     projectId: string,
     projectName: string,
@@ -77,7 +80,8 @@ export function ProjectSettingsForm({
     currentAliases?: string,
     piiScrubbingLevel?: 'low' | 'medium' | 'high',
     piiScrubbingEnabled?: boolean,
-    defaultTab?: TabType
+    defaultTab?: TabType,
+    token?: string
 }) {
     const router = useRouter();
     const [activeTab, setActiveTab] = useState<TabType>(defaultTab || 'general');
@@ -236,6 +240,7 @@ export function ProjectSettingsForm({
         { id: 'providers', label: 'AI Providers', icon: ShieldCheck },
         { id: 'aliases', label: 'Model Aliases', icon: Cpu },
         { id: 'privacy', label: 'Privacy & PII', icon: Eye },
+        { id: 'alerts', label: 'Alerts', icon: Bell },
     ];
 
     return (
@@ -647,6 +652,20 @@ export function ProjectSettingsForm({
                                     </div>
                                 </div>
                             </div>
+                        </div>
+                    )}
+
+                    {/* Alerts Tab */}
+                    {activeTab === 'alerts' && (
+                        <div className="animate-fade-in">
+                            {token ? (
+                                <AlertsTab projectId={projectId} token={token} />
+                            ) : (
+                                <div className="flex flex-col items-center justify-center py-12">
+                                    <Lock className="w-12 h-12 text-muted mb-3" />
+                                    <p className="text-muted">Authentication required to manage alerts</p>
+                                </div>
+                            )}
                         </div>
                     )}
                 </div>

@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { Activity, CheckCircle, XCircle } from 'lucide-react';
-import { getHealthStatus, HealthStatus } from '@/lib/health-api';
+import { getHealthStatus, type HealthStatus as HealthStatusType } from '@/lib/health-api';
 
 /**
  * HealthStatus Component
@@ -21,7 +21,7 @@ import { getHealthStatus, HealthStatus } from '@/lib/health-api';
  * that the gateway service is operational.
  */
 export const HealthStatus: React.FC = () => {
-    const [health, setHealth] = useState<HealthStatus | null>(null);
+    const [health, setHealth] = useState<HealthStatusType | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [lastChecked, setLastChecked] = useState<Date | null>(null);
