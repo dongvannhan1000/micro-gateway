@@ -22,9 +22,35 @@ alerts.post('/', async (c) => {
     const user = c.get('user')!;
     const repos = c.get('repos')!;
     const projectId = c.req.param('projectId')!;
-    const { type, threshold, action, target } = await c.req.json();
+    const { type, scope, gateway_key_id, threshold, action, target } = await c.req.json();
 
-    if (!type || !action) return c.json({ error: 'Missing required fields' }, 400);
+    // Validate required fields
+    if (!type || !scope || !action) {
+        return c.json({ error: 'Missing required fields: type, scope, action' }, 400);
+    }
+
+    // Validate scope value
+    if (!['project', 'key'].includes(scope)) {
+        return c.json({ error: 'Invalid scope. Must be "project" or "key"' }, 400);
+    }
+
+    // Validate gateway_key_id when scope='key'
+    if (scope === 'key') {
+        if (!gateway_key_id) {
+            return c.json({ error: 'gateway_key_id is required when scope="key"' }, 400);
+        }
+
+        // Verify gateway_key_id belongs to this project
+        const isValidKey = await repos.alert.validateGatewayKey(gateway_key_id, projectId);
+        if (!isValidKey) {
+            return c.json({ error: 'Invalid gateway_key_id or key does not belong to this project' }, 400);
+        }
+    }
+
+    // Ensure gateway_key_id is null when scope='project'
+    if (scope === 'project' && gateway_key_id) {
+        return c.json({ error: 'gateway_key_id must be null when scope="project"' }, 400);
+    }
 
     try {
         const id = crypto.randomUUID();
@@ -32,14 +58,17 @@ alerts.post('/', async (c) => {
             id,
             projectId,
             type,
+            scope,
+            gateway_key_id,
             threshold: threshold || 0,
             action,
             target,
         });
 
-        return c.json({ id, success: true }, 201);
+        return c.json({ id, success: true, scope, gateway_key_id }, 201);
     } catch (err) {
-        return c.json({ error: 'Failed' }, 500);
+        console.error('[Alerts] Failed to create rule:', err);
+        return c.json({ error: 'Failed to create alert rule' }, 500);
     }
 });
 

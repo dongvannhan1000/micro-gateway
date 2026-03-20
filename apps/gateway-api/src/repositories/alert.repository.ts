@@ -24,25 +24,42 @@ export class AlertRepository {
    */
   async findActiveRules(projectId: string): Promise<any[]> {
     const { results } = await this.db.execute(
-      `SELECT * FROM alert_rules 
+      `SELECT * FROM alert_rules
        WHERE project_id = ? AND is_enabled = 1`,
       [projectId]
     );
     return results;
   }
 
+  /**
+   * Validate gateway_key_id belongs to the project
+   */
+  async validateGatewayKey(
+    gatewayKeyId: string,
+    projectId: string
+  ): Promise<boolean> {
+    const result = await this.db.execute(
+      `SELECT id FROM gateway_keys
+       WHERE id = ? AND project_id = ?`,
+      [gatewayKeyId, projectId]
+    );
+    return (result.results?.length || 0) > 0;
+  }
+
   async createRule(data: {
     id: string;
     projectId: string;
     type: string;
+    scope: string;
+    gateway_key_id?: string | null;
     threshold: number;
     action: string;
     target?: string;
   }): Promise<void> {
     await this.db.run(
-      `INSERT INTO alert_rules (id, project_id, type, threshold, action, target, is_enabled)
-       VALUES (?, ?, ?, ?, ?, ?, 1)`,
-      [data.id, data.projectId, data.type, data.threshold, data.action, data.target]
+      `INSERT INTO alert_rules (id, project_id, type, scope, gateway_key_id, threshold, action, target, is_enabled)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1)`,
+      [data.id, data.projectId, data.type, data.scope, data.gateway_key_id, data.threshold, data.action, data.target]
     );
   }
 

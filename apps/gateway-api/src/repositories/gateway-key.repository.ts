@@ -70,6 +70,21 @@ export class GatewayKeyRepository {
     return results.length > 0 ? results[0] : null;
   }
 
+  /**
+   * Find a gateway key by ID, verifying it belongs to a specific project.
+   * Used for validation in alert creation.
+   */
+  async findById(keyId: string, projectId: string): Promise<any | null> {
+    const { results } = await this.db.execute(
+      `SELECT k.*
+       FROM gateway_keys k
+       WHERE k.id = ? AND k.project_id = ? AND k.status = 'active'
+       LIMIT 1`,
+      [keyId, projectId]
+    );
+    return results.length > 0 ? results[0] : null;
+  }
+
   async create(data: {
     id: string;
     projectId: string;
