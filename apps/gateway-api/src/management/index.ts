@@ -17,6 +17,17 @@ management.use('*', ipRateLimiter);
 // All management routes require Supabase session authentication
 management.use('*', sessionAuth);
 
+// DEBUG: Log all incoming requests to management router
+management.use('*', async (c, next) => {
+    console.log('[Management] Incoming request:', {
+        method: c.req.method,
+        path: c.req.path,
+        url: c.req.url,
+        matched: c.req.matchedRoutes
+    });
+    await next();
+});
+
 // Pricing Sync (Admin/Internal)
 management.post('/pricing/sync', syncPricingFromLiteLLM);
 
@@ -197,9 +208,11 @@ management.delete('/projects/:projectId/provider-configs/:provider', async (c) =
 // --- Gateway Keys ---
 
 management.get('/projects/:projectId/gateway-keys', async (c) => {
+    console.log('[Management] GET /projects/:projectId/gateway-keys called');
     const user = c.get('user')!;
     const repos = c.get('repos')!;
     const projectId = c.req.param('projectId');
+    console.log('[Management] Project ID:', projectId);
 
     try {
         const results = await repos.gatewayKey.findByProject(projectId, user.id);
