@@ -5,11 +5,39 @@ All notable changes to the Micro-Security Gateway project will be documented in 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased] - 2026-03-19
+## [Unreleased] - 2026-03-20
 
-### 🚀 Production-Ready Features
+### 🔄 Simplification
 
-#### Added - Resilience Patterns
+#### Removed - Admin Functionality
+
+Simplified the codebase by removing all admin-related features to focus on core gateway functionality:
+
+- **Admin Authentication Middleware** - Removed JWT-based admin auth
+- **Admin Dashboard** - Removed real-time metrics dashboard
+- **Observability Configuration API** - Removed metrics API endpoints
+- **Provider Health Monitoring** - Removed automated health checks
+- **Admin Documentation** - Removed deployment and operations docs
+- **Admin Scripts** - Removed testing and setup scripts
+
+**Reason**: User feedback indicated admin functionality was too complex and not needed for current use case.
+
+**Impact**: Core gateway features remain fully functional:
+- ✅ Multi-provider routing (OpenAI, Anthropic, Google, DeepSeek, Groq, Together)
+- ✅ Circuit Breaker (per-project, per-provider)
+- ✅ Request Timeout (30s max)
+- ✅ Bulkhead Pattern (concurrency limits)
+- ✅ Retry Logic (3x exponential backoff)
+- ✅ Rate Limiting (per-key configurable)
+- ✅ Anomaly Detection (prompt injection blocking)
+- ✅ PII Scrubbing (GDPR/HIPAA compliant)
+- ✅ Cost Tracking (per project/provider)
+
+**Test Coverage**: 292 tests passing (100% success rate)
+
+### 🚀 Production-Ready Features (Retained from Previous Release)
+
+#### Resilience Patterns
 
 - **Circuit Breaker** - Per-project, per-provider circuit breaker pattern
   - Three states: CLOSED, OPEN, HALF_OPEN
@@ -35,45 +63,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Smart retry detection: only for 5xx errors and timeouts
   - No retry for client errors (4xx) to avoid wasting quota
 
-#### Added - Observability & Monitoring
-
-- **Cloudflare Workers Traces Integration**
-  - Automatic instrumentation (fetch, KV, D1)
-  - 10% sampling rate (configurable)
-  - Custom trace attributes: project_id, api_key_id, correlation_id, provider, model
-  - OTLP export to Grafana Cloud, Honeycomb, or Axiom
-
-- **Provider Health Monitoring**
-  - Automated health checks every 5 minutes via Cloudflare Workers Cron
-  - Tests each provider with actual API calls
-  - Measures latency, success rate, uptime
-  - Stores results in KV with 10-minute TTL
-  - Dashboard integration for real-time status
-
-- **Admin Dashboard**
-  - Real-time metrics display (business metrics from D1)
-  - Provider health cards with status indicators
-  - Cloudflare Traces integration (links to external dashboards)
-  - Auto-refresh every 30 seconds
-  - Glassmorphism UI with responsive design
-  - Protected by admin authentication (JWT + email allowlist)
-
-- **Observability Configuration API**
-  - GET `/api/admin/observability/config` - Trace configuration for dashboard
-  - GET `/api/admin/observability/metrics` - Business metrics from D1
-  - Provider health from KV storage
-  - Support for multiple observability platforms
-
-#### Added - Security & Authentication
-
-- **Admin Authentication Middleware**
-  - JWT-based authentication using `jose` library
-  - Email allowlist via `ADMIN_EMAILS` environment variable
-  - Proper signature verification (HS256)
-  - Token expiration validation (1-hour max)
-  - Issuer and audience validation
-
-#### Added - Testing & Deployment
+#### Testing & Deployment
 
 - **Load Testing with k6**
   - Comprehensive load test scenarios
@@ -81,23 +71,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Custom metrics: circuit breaker trips, timeouts, rate limit hits
   - Performance thresholds: P95 < 2000ms, error rate < 5%
   - Complete documentation and usage guide
-
-- **Pre-Deployment Validation Script**
-  - 87 automated checks across 11 sections
-  - Unit tests, security audit, TypeScript compilation
-  - Database migrations, configuration validation
-  - Hardcoded secrets detection
-  - CI/CD integration ready
-
-- **Post-Deployment Smoke Tests**
-  - 8 test sections covering all endpoints
-  - Health check, authentication, rate limiting
-  - Error handling, performance validation
-  - Success percentage calculation
-
-- **Production Rollout Plan**
-  - 4-phase canary deployment strategy
-  - Automated rollback triggers (error rate > 20%, latency > 10000ms)
   - 24-hour post-deployment monitoring schedule
   - Communication plan and escalation matrix
 
