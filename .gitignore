@@ -61,6 +61,9 @@ scripts/*.sh
 
 # Local Development Scripts (private utilities)
 local-scripts/*
+
+# TypeScript compilation outputs (temporary debug files)
+tsc_output*.txt
 *.txt
 
 # Coverage Reports
