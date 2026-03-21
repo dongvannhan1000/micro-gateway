@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Bell, Plus, Trash2, ShieldAlert, DollarSign, AlertCircle } from 'lucide-react';
+import { Bell, Plus, Trash2, ShieldAlert, DollarSign, AlertCircle, FolderIcon, KeyIcon, MailIcon, Link2Icon } from 'lucide-react';
 import { createAlertRule, deleteAlertRule, getAlertRules } from '../actions';
 import { clsx } from 'clsx';
 
