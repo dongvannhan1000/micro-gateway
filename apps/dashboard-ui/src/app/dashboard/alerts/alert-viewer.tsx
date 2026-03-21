@@ -75,7 +75,7 @@ export function AlertViewer({ initialRules, projects, initialProjectId }: AlertV
             };
             await createAlertRule(selectedProjectId, payload);
             setIsAdding(false);
-            setNewRule({ name: '', type: 'cost_threshold', threshold: 0, action: 'email', target: '' });
+            setNewRule({ type: 'cost_threshold', scope: 'project', gatewayKeyId: '', threshold: 0, action: 'email', target: '' });
             loadRules(selectedProjectId);
         } catch (err) {
             console.error(err);
@@ -132,17 +132,7 @@ export function AlertViewer({ initialRules, projects, initialProjectId }: AlertV
                     </h3>
                     <div className="space-y-4">
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <div className="space-y-1.5">
-                                <label className="text-[10px] uppercase font-bold text-muted px-1">Rule Name</label>
-                                <input
-                                    type="text"
-                                    placeholder="Monthly Spending Alert"
-                                    className="bg-glass-bg border border-glass-border rounded-xl px-3 py-2 text-sm w-full outline-none focus:border-accent-violet/50"
-                                    value={newRule.name}
-                                    onChange={e => setNewRule({...newRule, name: e.target.value})}
-                                />
-                            </div>
-                            <div className="space-y-1.5">
+                                                        <div className="space-y-1.5">
                                 <label className="text-[10px] uppercase font-bold text-muted px-1">Trigger Type</label>
                                 <select
                                     className="bg-glass-bg border border-glass-border rounded-xl px-3 py-2 text-sm w-full outline-none focus:border-accent-violet/50"
