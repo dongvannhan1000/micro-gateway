@@ -14,6 +14,35 @@ Improve the Dashboard Alerts page (`/dashboard/alerts`) to display complete aler
 - [ ] Backend restarted after migration
 - [ ] Verify `alert_rules` table has `scope` and `gateway_key_id` columns
 
+**Verification commands:**
+```bash
+# Check current database schema
+cd apps/gateway-api
+wrangler d1 execute <DB_NAME> --command="PRAGMA table_info(alert_rules);"
+
+# Verify migration applied
+wrangler d1 migrations list <DB_NAME> | grep 0021
+```
+
+## Breaking Changes
+
+⚠️ **Frontend will break after backend update!**
+
+**Issue:** Current frontend displays `{rule.name}` (line 229 in alert-viewer.tsx) but this field doesn't exist in database.
+
+**Solution:** Update frontend to use auto-generated descriptions:
+```typescript
+// Replace this:
+<h3 className="font-bold text-lg">{rule.name}</h3>
+
+// With this:
+<h3 className="font-bold text-lg">
+  {rule.type === 'cost_threshold'
+    ? `Cost Threshold Alert`
+    : `Prompt Injection Alert`}
+</h3>
+```
+
 ## Problem Statement
 
 The Dashboard Alerts page currently shows limited information:
@@ -279,6 +308,44 @@ const payload = {
 **Implementation Status:** PENDING - Form needs scope selector and key dropdown
 
 ## Implementation Plan
+
+### API Contract Testing
+
+Before starting frontend work, verify the backend API returns correct data:
+
+```bash
+# Test API response (after backend update)
+curl -H "Authorization: Bearer <TOKEN>" \
+  https://<gateway-url>/api/projects/<project-id>/alerts
+
+# Expected response structure:
+{
+  "id": "abc123",
+  "type": "cost_threshold",
+  "scope": "project",
+  "gateway_key_id": null,
+  "gateway_key_name": null,
+  "threshold": 50,
+  "action": "email",
+  "target": "admin@example.com",
+  "is_enabled": true,
+  "created_at": "2025-03-21T10:00:00Z"
+}
+```
+
+### Rollback Plan
+
+If implementation fails, rollback steps:
+
+1. **Backend rollback:** Revert `findRulesByProject` to original query (remove JOIN)
+2. **Frontend rollback:** Revert alert-viewer.tsx to previous version
+3. **Database:** No rollback needed (migration only adds columns, never removes)
+
+**Rollback command:**
+```bash
+git revert <commit-hash> --no-commit
+npm run deploy:gateway
+```
 
 ### Files to Modify
 
