@@ -93,7 +93,14 @@ export function AlertViewer({ initialRules, projects, initialProjectId, getGatew
             };
             await createAlertRule(selectedProjectId, payload);
             setIsAdding(false);
-            setNewRule({ type: 'cost_threshold', scope: 'project', gatewayKeyId: '', threshold: 0, action: 'email', target: '' });
+            setNewRule({
+        type: 'cost_threshold',
+        scope: 'project',
+        gatewayKeyId: '',
+        threshold: 0,
+        action: 'email',
+        target: ''
+    });
             loadRules(selectedProjectId);
         } catch (err) {
             console.error(err);
