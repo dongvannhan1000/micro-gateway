@@ -250,6 +250,21 @@ export function AlertViewer({ initialRules, projects, initialProjectId }: AlertV
                                 </div>
                             )}
                         </div>
+                        <div className="mt-2 flex items-center gap-1.5 text-xs text-muted">
+                            {rule.action === 'email' ? (
+                                <>
+                                    <MailIcon className="w-3.5 h-3.5" />
+                                    <span>{rule.target || 'Not configured'}</span>
+                                </>
+                            ) : (
+                                <>
+                                    <Link2Icon className="w-3.5 h-3.5" />
+                                    <span className="truncate max-w-[150px]" title={rule.target}>
+                                        {rule.target || 'Not configured'}
+                                    </span>
+                                </>
+                            )}
+                        </div>
                         <div className="mt-4 pt-4 border-t border-glass-border flex items-center justify-between">
                             <div className="flex items-center gap-2">
                                 <div className="w-2 h-2 rounded-full bg-green-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]"></div>
