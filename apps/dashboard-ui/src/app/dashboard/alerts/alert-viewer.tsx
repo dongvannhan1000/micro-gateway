@@ -226,7 +226,11 @@ export function AlertViewer({ initialRules, projects, initialProjectId }: AlertV
                                 <Trash2 className="w-4 h-4" />
                             </button>
                         </div>
-                        <h3 className="font-bold text-lg">{rule.name}</h3>
+                        <h3 className="font-bold text-lg">
+                    {rule.type === 'cost_threshold'
+                      ? 'Cost Threshold Alert'
+                      : 'Prompt Injection Alert'}
+                  </h3>
                         <p className="text-xs text-muted mt-2">
                             {rule.type === 'cost_threshold'
                                 ? `Triggers when project cost exceeds $${rule.threshold}`
