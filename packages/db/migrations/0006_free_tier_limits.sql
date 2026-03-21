@@ -33,7 +33,13 @@ CREATE INDEX IF NOT EXISTS idx_account_usage_user ON account_usage(user_id);
 -- 4. Create indexes for gateway_keys if missing
 CREATE INDEX IF NOT EXISTS idx_gateway_keys_project ON gateway_keys(project_id);
 
--- 5. Update existing records with default values (idempotent)
+-- 5. Add trial tracking columns to users table (if they don't exist)
+-- These ADD COLUMN commands are safe - SQLite ignores if column exists
+ALTER TABLE users ADD COLUMN trial_start_date TEXT;
+ALTER TABLE users ADD COLUMN trial_requests_used INTEGER DEFAULT 0;
+ALTER TABLE users ADD COLUMN trial_max_requests INTEGER DEFAULT 10000;
+
+-- 6. Update existing records with default values (idempotent)
 UPDATE users SET trial_requests_used = 0 WHERE trial_requests_used IS NULL;
 UPDATE users SET trial_max_requests = 10000 WHERE trial_max_requests IS NULL;
 
