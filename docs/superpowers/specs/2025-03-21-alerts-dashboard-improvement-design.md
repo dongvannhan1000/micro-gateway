@@ -8,6 +8,12 @@
 
 Improve the Dashboard Alerts page (`/dashboard/alerts`) to display complete alert information, enabling users to distinguish between alerts effectively. The two Alerts sections serve different purposes and will both be retained.
 
+## Prerequisites
+
+- [ ] Migration `0021_add_alert_scope.sql` applied to database
+- [ ] Backend restarted after migration
+- [ ] Verify `alert_rules` table has `scope` and `gateway_key_id` columns
+
 ## Problem Statement
 
 The Dashboard Alerts page currently shows limited information:
@@ -76,8 +82,8 @@ Two Alerts sections exist and serve different purposes:
 | Key Level | 🔑 KeyIcon | Green | "Key Level: [Key Name]" |
 
 **Key-level alerts display:**
-- Gateway key name (if available)
-- Usage info: `$X / $limit` (if available)
+- Gateway key name (from JOIN query)
+- Note: Usage display deferred to Phase 2 (requires aggregation queries)
 
 **Notification target:**
 - Email: 📧 icon + email address
@@ -135,8 +141,10 @@ interface AlertRule {
 
 **Missing data fallbacks:**
 - No target → "Not configured" (gray)
-- Key-level without key info → "Key Level (Unknown Key)"
+- Key-level without key name → "Key Level (Unknown Key)"
+- Key-level with deleted key → "Key Level (Deleted Key)"
 - Invalid threshold → "N/A"
+- Null `is_enabled` → Assume `true` (enabled)
 
 **Empty states:**
 - No project selected → Show prompt "Select a project"
@@ -184,13 +192,19 @@ async findRulesByProject(projectId: string) {
 }
 ```
 
+**Implementation Status:** PENDING - Backend query needs update
+
+**Error handling:** If `gateway_key_name` is NULL (key was deleted), frontend should display "Key Level (Deleted Key)"
+
 ### Fix Create Alert Form
 
 **Current issue:** Create form doesn't send `scope` field
 
 **Required fix in `alert-viewer.tsx`:**
+
+1. **Add scope selector to create form:**
 ```typescript
-// Add scope selector to create form (lines 126-209)
+// Add to form state (lines 19-25)
 const [newRule, setNewRule] = useState({
     type: 'cost_threshold',
     scope: 'project',  // ← ADD THIS
@@ -200,16 +214,69 @@ const [newRule, setNewRule] = useState({
     target: ''
 });
 
-// Update payload (lines 67-72)
+// Fetch gateway keys for dropdown
+const [gatewayKeys, setGatewayKeys] = useState([]);
+useEffect(() => {
+  if (selectedProjectId) {
+    fetch(`${GATEWAY_URL}/api/projects/${selectedProjectId}/gateway-keys`)
+      .then(r => r.json())
+      .then(setGatewayKeys);
+  }
+}, [selectedProjectId]);
+```
+
+2. **Add UI for scope selection:**
+```tsx
+<!-- Add to create form after type selector -->
+<div className="space-y-1.5">
+  <label className="text-[10px] uppercase font-bold text-muted px-1">
+    Alert Scope
+  </label>
+  <select
+    value={newRule.scope}
+    onChange={e => setNewRule({...newRule, scope: e.target.value})}
+    className="bg-glass-bg border border-glass-border rounded-xl px-3 py-2 text-sm w-full"
+  >
+    <option value="project">Project Level (All Keys)</option>
+    <option value="key">Specific Gateway Key</option>
+  </select>
+</div>
+
+{newRule.scope === 'key' && (
+  <div className="space-y-1.5">
+    <label className="text-[10px] uppercase font-bold text-muted px-1">
+      Select Gateway Key
+    </label>
+    <select
+      value={newRule.gatewayKeyId}
+      onChange={e => setNewRule({...newRule, gatewayKeyId: e.target.value})}
+      className="bg-glass-bg border border-glass-border rounded-xl px-3 py-2 text-sm w-full"
+      required
+    >
+      <option value="">Choose a key...</option>
+      {gatewayKeys.map(key => (
+        <option key={key.id} value={key.id}>
+          {key.name}
+        </option>
+      ))}
+    </select>
+  </div>
+)}
+```
+
+3. **Update payload to include scope:**
+```typescript
 const payload = {
     type: newRule.type,
-    scope: newRule.scope,  // ← ADD THIS
-    gateway_key_id: newRule.scope === 'key' ? newRule.gatewayKeyId : null,  // ← ADD THIS
+    scope: newRule.scope,
+    gateway_key_id: newRule.scope === 'key' ? newRule.gatewayKeyId : null,
     threshold: newRule.threshold,
     action: newRule.action,
     target: newRule.target
 };
 ```
+
+**Implementation Status:** PENDING - Form needs scope selector and key dropdown
 
 ## Implementation Plan
 
@@ -230,9 +297,22 @@ const payload = {
 
 ### Implementation Priority
 
-1. Check backend API response structure first
-2. Update frontend component to use available data
-3. Add visual polish (icons, colors, badges)
+**Phase 1 - Backend (Required First):**
+1. [ ] Update `findRulesByProject` query to LEFT JOIN with gateway_keys
+2. [ ] Verify migration 0021 is applied
+3. [ ] Test API response includes `gateway_key_name`
+
+**Phase 2 - Frontend Core:**
+1. [ ] Update card rendering to display `is_enabled` status
+2. [ ] Add scope badges (Project/Key level) with color coding
+3. [ ] Add notification target display with icons
+4. [ ] Update create form to include scope selector
+5. [ ] Add gateway key dropdown when scope='key'
+
+**Phase 3 - Visual Polish:**
+1. [ ] Add icons and color coding
+2. [ ] Implement responsive layout
+3. [ ] Test edge cases and error states
 
 ## Testing Checklist
 
