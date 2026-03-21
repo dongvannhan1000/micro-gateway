@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Bell, Plus, Trash2, ShieldAlert, DollarSign, AlertCircle, FolderIcon, KeyIcon, MailIcon, Link2Icon } from 'lucide-react';
 import { createAlertRule, deleteAlertRule, getAlertRules } from '../actions';
 import { clsx } from 'clsx';
@@ -9,9 +9,10 @@ interface AlertViewerProps {
     initialRules: any[];
     projects: any[];
     initialProjectId: string;
+    getGatewayKeys: (projectId: string) => Promise<any[]>;
 }
 
-export function AlertViewer({ initialRules, projects, initialProjectId }: AlertViewerProps) {
+export function AlertViewer({ initialRules, projects, initialProjectId, getGatewayKeys }: AlertViewerProps) {
     const [rules, setRules] = useState<any[]>(initialRules);
     const [loading, setLoading] = useState(false);
     const [selectedProjectId, setSelectedProjectId] = useState<string>(initialProjectId);
@@ -26,6 +27,21 @@ export function AlertViewer({ initialRules, projects, initialProjectId }: AlertV
     });
 
     const [gatewayKeys, setGatewayKeys] = useState<any[]>([]);
+
+    useEffect(() => {
+        const loadKeys = async () => {
+            if (selectedProjectId) {
+                try {
+                    const data = await getGatewayKeys(selectedProjectId);
+                    setGatewayKeys(data || []);
+                } catch (err) {
+                    console.error('Failed to fetch gateway keys:', err);
+                    setGatewayKeys([]);
+                }
+            }
+        };
+        loadKeys();
+    }, [selectedProjectId, getGatewayKeys]);
 
     const loadRules = async (projectId: string) => {
         setLoading(true);

@@ -1,5 +1,5 @@
 import React, { Suspense } from 'react';
-import { getAlertRules, getProjects } from '../actions';
+import { getAlertRules, getProjects, getGatewayKeys } from '../actions';
 import { AlertViewer } from './alert-viewer';
 
 export default async function AlertsPage(props: { searchParams: Promise<{ projectId?: string }> }) {
@@ -32,10 +32,11 @@ async function AlertsContent({ initialProjectId }: { initialProjectId?: string }
     }
     
     return (
-        <AlertViewer 
+        <AlertViewer
             initialRules={initialRules}
             projects={projects}
             initialProjectId={selectedId}
+            getGatewayKeys={getGatewayKeys}
         />
     );
 }

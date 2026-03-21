@@ -178,3 +178,11 @@ export async function deleteAlertRule(projectId: string, alertId: string) {
     revalidatePath(`/dashboard/projects/${projectId}/alerts`);
     return { success: true };
 }
+
+export async function getGatewayKeys(projectId: string) {
+    const supabase = await createClient();
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) throw new Error('Unauthorized');
+
+    return fetchGateway(`/api/projects/${projectId}/gateway-keys`, session.access_token);
+}
