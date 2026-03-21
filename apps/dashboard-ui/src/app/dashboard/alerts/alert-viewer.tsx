@@ -237,6 +237,19 @@ export function AlertViewer({ initialRules, projects, initialProjectId }: AlertV
                                 : `Triggers when prompt injection is detected`
                             }
                         </p>
+                        <div className="mt-3 flex items-center gap-2">
+                            {rule.scope === 'project' ? (
+                                <div className="flex items-center gap-1.5 px-2 py-1 rounded-lg bg-blue-500/10 border border-blue-500/20 text-blue-400 text-xs font-medium">
+                                    <FolderIcon className="w-3.5 h-3.5" />
+                                    Project Level
+                                </div>
+                            ) : (
+                                <div className="flex items-center gap-1.5 px-2 py-1 rounded-lg bg-green-500/10 border border-green-500/20 text-green-400 text-xs font-medium">
+                                    <KeyIcon className="w-3.5 h-3.5" />
+                                    Key Level{rule.gateway_key_name ? `: ${rule.gateway_key_name}` : ' (Deleted Key)'}
+                                </div>
+                            )}
+                        </div>
                         <div className="mt-4 pt-4 border-t border-glass-border flex items-center justify-between">
                             <div className="flex items-center gap-2">
                                 <div className="w-2 h-2 rounded-full bg-green-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]"></div>
