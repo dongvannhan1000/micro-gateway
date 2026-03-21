@@ -10,9 +10,13 @@ export class AlertRepository {
 
   async findRulesByProject(projectId: string, userId: string): Promise<any[]> {
     const { results } = await this.db.execute(
-      `SELECT * FROM alert_rules 
-       WHERE project_id = ? AND project_id IN (SELECT id FROM projects WHERE user_id = ?)
-       ORDER BY created_at DESC`,
+      `SELECT
+         ar.*,
+         gk.name as gateway_key_name
+       FROM alert_rules ar
+       LEFT JOIN gateway_keys gk ON ar.gateway_key_id = gk.id
+       WHERE ar.project_id = ? AND ar.project_id IN (SELECT id FROM projects WHERE user_id = ?)
+       ORDER BY ar.created_at DESC`,
       [projectId, userId]
     );
     return results;
