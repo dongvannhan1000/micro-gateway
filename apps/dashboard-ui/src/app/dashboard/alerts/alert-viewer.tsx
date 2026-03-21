@@ -17,12 +17,15 @@ export function AlertViewer({ initialRules, projects, initialProjectId }: AlertV
     const [selectedProjectId, setSelectedProjectId] = useState<string>(initialProjectId);
     const [isAdding, setIsAdding] = useState(false);
     const [newRule, setNewRule] = useState({
-        name: '',
         type: 'cost_threshold',
+        scope: 'project',  // ← NEW
+        gatewayKeyId: '',  // ← NEW
         threshold: 0,
         action: 'email',
         target: ''
     });
+
+    const [gatewayKeys, setGatewayKeys] = useState<any[]>([]);
 
     const loadRules = async (projectId: string) => {
         setLoading(true);
