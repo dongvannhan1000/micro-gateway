@@ -164,6 +164,7 @@ export async function createAlertRule(projectId: string, rule: any) {
         body: JSON.stringify(rule),
     });
     revalidatePath(`/dashboard/projects/${projectId}/alerts`);
+    revalidatePath('/dashboard/alerts');
     return result;
 }
 
@@ -176,6 +177,7 @@ export async function deleteAlertRule(projectId: string, alertId: string) {
         method: 'DELETE',
     });
     revalidatePath(`/dashboard/projects/${projectId}/alerts`);
+    revalidatePath('/dashboard/alerts');
     return { success: true };
 }
 
