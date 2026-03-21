@@ -3,6 +3,8 @@
 import { useState, useEffect } from 'react';
 import { Bell, Plus, Trash2, AlertTriangle, Loader2 } from 'lucide-react';
 
+const GATEWAY_URL = process.env.NEXT_PUBLIC_GATEWAY_URL || 'http://localhost:8787';
+
 type AlertScope = 'project' | 'key';
 
 interface AlertRule {
@@ -50,7 +52,7 @@ export function AlertsTab({ projectId, token }: AlertsTabProps) {
 
   async function fetchAlerts() {
     try {
-      const response = await fetch(`/api/projects/${projectId}/alerts`, {
+      const response = await fetch(`${GATEWAY_URL}/api/projects/${projectId}/alerts`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       if (response.ok) {
@@ -66,7 +68,7 @@ export function AlertsTab({ projectId, token }: AlertsTabProps) {
 
   async function fetchGatewayKeys() {
     try {
-      const response = await fetch(`/api/projects/${projectId}/gateway-keys`, {
+      const response = await fetch(`${GATEWAY_URL}/api/projects/${projectId}/gateway-keys`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       if (response.ok) {
@@ -89,7 +91,7 @@ export function AlertsTab({ projectId, token }: AlertsTabProps) {
 
     setIsSaving(true);
     try {
-      const response = await fetch(`/api/projects/${projectId}/alerts`, {
+      const response = await fetch(`${GATEWAY_URL}/api/projects/${projectId}/alerts`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -129,7 +131,7 @@ export function AlertsTab({ projectId, token }: AlertsTabProps) {
     if (!confirm('Are you sure you want to delete this alert?')) return;
 
     try {
-      const response = await fetch(`/api/projects/${projectId}/alerts/${alertId}`, {
+      const response = await fetch(`${GATEWAY_URL}/api/projects/${projectId}/alerts/${alertId}`, {
         method: 'DELETE',
         headers: { 'Authorization': `Bearer ${token}` }
       });
