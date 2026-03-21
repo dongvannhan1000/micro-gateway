@@ -46,9 +46,8 @@ Two Alerts sections exist and serve different purposes:
 ┌────────────────────────────────────────────┐
 │ [Icon]              [Delete button]        │
 │                                              │
-│ Alert Name (Bold, large)                    │
-│                                              │
-│ Description (Trigger condition)             │
+│ Alert Type & Description                     │
+│ "Cost Threshold - Triggers when > $50"      │
 │                                              │
 │ ┌────────────────────────────────────┐     │
 │ │ 📁 Project Level                    │     │
@@ -61,10 +60,13 @@ Two Alerts sections exist and serve different purposes:
 
 **Information priority:**
 1. **Top:** Alert type (icon + color) + Actions (delete)
-2. **Primary:** Alert name (user-defined, most identifiable)
-3. **Secondary:** Trigger description (threshold/action)
-4. **Metadata block:** Scope + notification target
-5. **Footer:** Status + monitoring indicator
+2. **Primary:** Alert type + trigger description (auto-generated)
+3. **Metadata block:** Scope + notification target
+4. **Footer:** Status + monitoring indicator
+
+**Alert Description Generation:**
+- Cost Threshold: "Cost Threshold - Triggers when spending exceeds $X"
+- Injection: "Prompt Injection - Triggers on high-risk attempts"
 
 ### Visual Treatment for Scope & Keys
 
@@ -94,26 +96,44 @@ Two Alerts sections exist and serve different purposes:
 
 ### Database Fields Required
 
+**Current Database Schema:**
+```sql
+CREATE TABLE alert_rules (
+    id TEXT PRIMARY KEY,
+    project_id TEXT NOT NULL,
+    type TEXT NOT NULL,  -- 'cost_threshold' or 'injection_detected'
+    scope TEXT NOT NULL,  -- 'project' or 'key'
+    gateway_key_id TEXT,
+    threshold REAL,
+    action TEXT NOT NULL,  -- 'email' or 'webhook'
+    target TEXT NOT NULL,
+    is_enabled INTEGER DEFAULT 1,
+    created_at TEXT DEFAULT CURRENT_TIMESTAMP
+);
+```
+
+**Frontend Interface (with backend enhancements):**
 ```typescript
 interface AlertRule {
   id: string;
-  name: string;
+  project_id: string;
   type: 'cost_threshold' | 'injection_detected';
   threshold?: number;
   scope: 'project' | 'key';
   gateway_key_id?: string;
-  gateway_key_name?: string;  // ← NEW
-  gateway_key_usage?: { current: number; limit: number }; // ← NEW
+  gateway_key_name?: string;  // ← NEW (from JOIN)
   action: 'email' | 'webhook';
   target: string;
-  is_enabled: boolean;  // ← NEW
+  is_enabled: boolean;
+  created_at: string;
 }
 ```
+
+**Note:** `name` field was removed from spec (not in current schema). Alerts will be identified by type + scope + target.
 
 ### Edge Cases & Error Handling
 
 **Missing data fallbacks:**
-- No name → "Untitled {type} Alert"
 - No target → "Not configured" (gray)
 - Key-level without key info → "Key Level (Unknown Key)"
 - Invalid threshold → "N/A"
@@ -133,6 +153,63 @@ interface AlertRule {
 - Reduce padding: `p-6` → `p-4`
 - Smaller text sizes
 - Stack metadata block vertically
+
+## Backend Implementation Required
+
+### API Enhancement
+
+**Current:** `GET /api/projects/{id}/alerts`
+```typescript
+// Current implementation in apps/gateway-api/src/management/alerts.ts
+async findRulesByProject(projectId: string) {
+  return db.query(
+    "SELECT * FROM alert_rules WHERE project_id = ?",
+    [projectId]
+  );
+}
+```
+
+**Required:** Add LEFT JOIN to get gateway key names
+```typescript
+async findRulesByProject(projectId: string) {
+  return db.query(`
+    SELECT
+      ar.*,
+      gk.name as gateway_key_name
+    FROM alert_rules ar
+    LEFT JOIN gateway_keys gk ON ar.gateway_key_id = gk.id
+    WHERE ar.project_id = ?
+    ORDER BY ar.created_at DESC
+  `, [projectId]);
+}
+```
+
+### Fix Create Alert Form
+
+**Current issue:** Create form doesn't send `scope` field
+
+**Required fix in `alert-viewer.tsx`:**
+```typescript
+// Add scope selector to create form (lines 126-209)
+const [newRule, setNewRule] = useState({
+    type: 'cost_threshold',
+    scope: 'project',  // ← ADD THIS
+    gatewayKeyId: '',  // ← ADD THIS for key-level
+    threshold: 0,
+    action: 'email',
+    target: ''
+});
+
+// Update payload (lines 67-72)
+const payload = {
+    type: newRule.type,
+    scope: newRule.scope,  // ← ADD THIS
+    gateway_key_id: newRule.scope === 'key' ? newRule.gatewayKeyId : null,  // ← ADD THIS
+    threshold: newRule.threshold,
+    action: newRule.action,
+    target: newRule.target
+};
+```
 
 ## Implementation Plan
 
@@ -159,6 +236,13 @@ interface AlertRule {
 
 ## Testing Checklist
 
+### Backend Tests
+- [ ] API returns `gateway_key_name` for key-level alerts
+- [ ] API returns `is_enabled` field correctly
+- [ ] Create alert accepts `scope` and `gateway_key_id` fields
+- [ ] LEFT JOIN query doesn't break when gateway_key_id is null
+
+### Frontend Tests
 - [ ] Project-level alerts display correctly with blue "Project Level" badge
 - [ ] Key-level alerts display with green "Key Level: [name]" badge
 - [ ] Email targets show with 📧 icon
@@ -170,6 +254,9 @@ interface AlertRule {
 - [ ] Mobile responsive layout works
 - [ ] Delete functionality still works
 - [ ] Project switching works correctly
+- [ ] Create form includes scope selector
+- [ ] Create form shows key dropdown when scope='key'
+- [ ] Key-level alerts can be created successfully
 
 ## Success Criteria
 
