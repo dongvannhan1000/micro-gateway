@@ -66,7 +66,58 @@ git commit -m "chore: verify migration 0021 for alert scope support"
 
 ---
 
-## Task 2: Update Backend Repository Query
+## Task 1.5: Update TypeScript Interfaces
+
+**Files:**
+- Modify: `packages/db/src/types.ts`
+
+- [ ] **Step 1: Read current AlertRule interface**
+
+Run: `grep -A 20 "interface AlertRule" packages/db/src/types.ts`
+
+- [ ] **Step 2: Add gateway_key_name to interface**
+
+Add this field to the AlertRule interface:
+```typescript
+gateway_key_name?: string;
+```
+
+- [ ] **Step 3: Commit interface update**
+
+```bash
+git add packages/db/src/types.ts
+git commit -m "feat: add gateway_key_name to AlertRule interface
+
+- Optional field for JOIN query result
+- Null for project-level alerts or deleted keys"
+```
+
+---
+
+## Task 2: Verify Management API Route Exists
+
+**Files:**
+- Check: `apps/gateway-api/src/management/alerts.ts`
+
+- [ ] **Step 1: Verify alerts route file exists**
+
+Run: `ls apps/gateway-api/src/management/alerts.ts`
+
+Expected: File exists
+
+- [ ] **Step 2: Check route is registered**
+
+Run: `grep -r "alerts" apps/gateway-api/src/index.ts`
+
+Should see alerts route imported and mounted
+
+- [ ] **Step 3: Document route exists**
+
+Add note: ✅ Management API route verified at `apps/gateway-api/src/management/alerts.ts`
+
+---
+
+## Task 3: Update Backend Repository Query
 
 **Files:**
 - Modify: `apps/gateway-api/src/repositories/alert.repository.ts`

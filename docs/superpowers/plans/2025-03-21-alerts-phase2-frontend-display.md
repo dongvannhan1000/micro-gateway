@@ -24,6 +24,36 @@
 
 ---
 
+## Task 0: Verify API Response Structure
+
+**Files:**
+- Test: `apps/dashboard-ui/src/app/dashboard/alerts/`
+
+- [ ] **Step 1: Check API returns new fields**
+
+Open browser DevTools → Console
+Run (with your project ID):
+```javascript
+fetch('/api/projects/YOUR_PROJECT_ID/alerts')
+  .then(r => r.json())
+  .then(data => console.log(data))
+```
+
+Expected: Each alert object should have:
+- `scope` field ('project' or 'key')
+- `gateway_key_name` field (string or null)
+- `is_enabled` field (0 or 1)
+
+- [ ] **Step 2: If fields are missing, Phase 1 is not complete**
+
+Do not proceed until Phase 1 backend changes are deployed and working.
+
+- [ ] **Step 3: Document API verification**
+
+✅ Confirmed API returns: scope, gateway_key_name, is_enabled
+
+---
+
 ## Task 1: Remove Hardcoded "name" Field Usage
 
 **Files:**
@@ -70,17 +100,41 @@ git commit -m "fix: remove hardcoded name field from alert cards
 
 ---
 
-## Task 2: Add Scope Badge with Color Coding
+## Task 2: Add All Required Icons (One-Time Setup)
+
+**Files:**
+- Modify: `apps/dashboard-ui/src/app/dashboard/alerts/alert-viewer.tsx:1-6`
+
+- [ ] **Step 1: Update all imports at once**
+
+Replace the entire import line (line 4) with:
+```tsx
+import { Bell, Plus, Trash2, ShieldAlert, DollarSign, AlertCircle, FolderIcon, KeyIcon, MailIcon, Link2Icon } from 'lucide-react';
+```
+
+This adds: `FolderIcon, KeyIcon, MailIcon, Link2Icon` to existing imports.
+
+- [ ] **Step 2: Verify no other import changes needed**
+
+All icons for all tasks are now imported in one place.
+
+- [ ] **Step 3: Commit icon imports**
+
+```bash
+git add apps/dashboard-ui/src/app/dashboard/alerts/alert-viewer.tsx
+git commit -m "feat: add required icons for alert card enhancements
+
+- Add FolderIcon, KeyIcon for scope badges
+- Add MailIcon, Link2Icon for notification targets
+- All icons imported from lucide-react"
+```
+
+---
+
+## Task 3: Add Scope Badge with Color Coding
 
 **Files:**
 - Modify: `apps/dashboard-ui/src/app/dashboard/alerts/alert-viewer.tsx:235-242`
-
-- [ ] **Step 1: Import required icons**
-
-Check imports at top of file (lines 1-6). Add if missing:
-```tsx
-import { FolderIcon, KeyIcon } from 'lucide-react';
-```
 
 - [ ] **Step 2: Add scope badge after description**
 
@@ -143,7 +197,7 @@ git commit -m "feat: add scope badges to alert cards
 
 ---
 
-## Task 3: Add Notification Target Display
+## Task 4: Add Notification Target Display
 
 **Files:**
 - Modify: `apps/dashboard-ui/src/app/dashboard/alerts/alert-viewer.tsx`
@@ -198,7 +252,7 @@ git commit -m "feat: add notification target display to alert cards
 
 ---
 
-## Task 4: Update Status Indicator
+## Task 5: Update Status Indicator
 
 **Files:**
 - Modify: `apps/dashboard-ui/src/app/dashboard/alerts/alert-viewer.tsx:236-242`
@@ -262,7 +316,7 @@ git commit -m "feat: add dynamic status indicator to alert cards
 
 ---
 
-## Task 5: Deploy and Test Frontend Changes
+## Task 6: Deploy and Test Frontend Changes
 
 **Files:**
 - Deploy: `apps/dashboard-ui/`

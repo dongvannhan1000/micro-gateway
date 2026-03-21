@@ -92,43 +92,111 @@ git commit -m "feat: add scope and gateway key fields to form state
 
 ---
 
-## Task 2: Fetch Gateway Keys for Dropdown
+## Task 2: Add Server Action for Gateway Keys
 
 **Files:**
+- Modify: `apps/dashboard-ui/src/app/dashboard/actions.ts`
 - Modify: `apps/dashboard-ui/src/app/dashboard/alerts/alert-viewer.tsx`
 
-- [ ] **Step 1: Add useEffect to fetch keys**
+- [ ] **Step 1: Add getGatewayKeys server action**
 
-Add this after the existing state declarations:
+Add this to `apps/dashboard-ui/src/app/dashboard/actions.ts` (after line 180):
+
+```typescript
+export async function getGatewayKeys(projectId: string) {
+    const supabase = await createClient();
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) throw new Error('Unauthorized');
+
+    return fetchGateway(`/api/projects/${projectId}/gateway-keys`, session.access_token);
+}
+```
+
+- [ ] **Step 2: Import useEffect in alert-viewer.tsx**
+
+Update the React import (line 3):
+```tsx
+import React, { useState, useEffect } from 'react';
+```
+
+- [ ] **Step 3: Add useEffect to fetch keys using server action**
+
+Add this after the state declarations in alert-viewer.tsx:
+
 ```tsx
 useEffect(() => {
-    if (selectedProjectId) {
-        fetch(`${GATEWAY_URL}/api/projects/${selectedProjectId}/gateway-keys`, {
-            headers: { 'Authorization': `Bearer ${token}` }
-        })
-        .then(res => res.json())
-        .then(data => setGatewayKeys(data || []))
-        .catch(err => console.error('Failed to fetch gateway keys:', err));
-    }
+    const loadKeys = async () => {
+        if (selectedProjectId) {
+            try {
+                const data = await getGatewayKeys(selectedProjectId);
+                setGatewayKeys(data || []);
+            } catch (err) {
+                console.error('Failed to fetch gateway keys:', err);
+                setGatewayKeys([]);
+            }
+        }
+    };
+    loadKeys();
 }, [selectedProjectId]);
 ```
 
-- [ ] **Step 2: Check if GATEWAY_URL is defined**
+- [ ] **Step 4: Import getGatewayKeys in page.tsx and pass to component**
 
-Verify at top of file:
+Update `apps/dashboard-ui/src/app/dashboard/alerts/page.tsx`:
+
+Change import (line 2):
 ```tsx
-const GATEWAY_URL = process.env.NEXT_PUBLIC_GATEWAY_URL || 'http://localhost:8787';
+import { getAlertRules, getProjects, getGatewayKeys } from '../actions';
 ```
 
-Add if missing.
+Update the component call (line 35-39):
+```tsx
+return (
+    <AlertViewer
+        initialRules={initialRules}
+        projects={projects}
+        initialProjectId={selectedId}
+        getGatewayKeys={getGatewayKeys}  // ← ADD THIS
+    />
+);
+```
 
-- [ ] **Step 3: Check if token is available**
+- [ ] **Step 5: Update AlertViewer interface and implementation**
 
-Look for how `getAlertRules` gets auth token. The component receives props - check if token is passed in.
+Update the props interface in alert-viewer.tsx (line 8-12):
+```tsx
+interface AlertViewerProps {
+    initialRules: any[];
+    projects: any[];
+    initialProjectId: string;
+    getGatewayKeys: (projectId: string) => Promise<any[]>;  // ← ADD THIS
+}
+```
 
-If token is not available, you may need to add it to props or get it from context.
+Update component signature:
+```tsx
+export function AlertViewer({ initialRules, projects, initialProjectId, getGatewayKeys }: AlertViewerProps) {
+```
 
-- [ ] **Step 4: Test key fetching**
+Update the useEffect to use the prop:
+```tsx
+useEffect(() => {
+    const loadKeys = async () => {
+        if (selectedProjectId) {
+            try {
+                const data = await getGatewayKeys(selectedProjectId);
+                setGatewayKeys(data || []);
+            } catch (err) {
+                console.error('Failed to fetch gateway keys:', err);
+                setGatewayKeys([]);
+            }
+        }
+    };
+    loadKeys();
+}, [selectedProjectId, getGatewayKeys]);
+```
+
+- [ ] **Step 6: Test key fetching**
 
 Open browser DevTools → Network
 Open: `http://localhost:3000/dashboard/alerts`
@@ -136,34 +204,18 @@ Select a project
 
 Expected: Should see API call to `/api/projects/{id}/gateway-keys`
 
-- [ ] **Step 5: Handle missing token gracefully**
-
-If token is not available in props, add it:
-
-Update interface (line 8-12):
-```tsx
-interface AlertViewerProps {
-    initialRules: any[];
-    projects: any[];
-    initialProjectId: string;
-    token?: string;  // ← ADD THIS
-}
-```
-
-Update component signature:
-```tsx
-export function AlertViewer({ initialRules, projects, initialProjectId, token }: AlertViewerProps) {
-```
-
-- [ ] **Step 6: Commit key fetching**
+- [ ] **Step 7: Commit server action**
 
 ```bash
+git add apps/dashboard-ui/src/app/dashboard/actions.ts
+git add apps/dashboard-ui/src/app/dashboard/alerts/page.tsx
 git add apps/dashboard-ui/src/app/dashboard/alerts/alert-viewer.tsx
-git commit -m "feat: fetch gateway keys for dropdown
+git commit -m "feat: add getGatewayKeys server action
 
-- Add useEffect to load keys when project changes
-- Add token prop for authenticated requests
-- Handle missing token gracefully"
+- Add server action following existing Supabase pattern
+- Pass getGatewayKeys to AlertViewer as prop
+- Load keys when selected project changes
+- Uses server action, not direct fetch with token"
 ```
 
 ---
