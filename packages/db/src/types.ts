@@ -72,6 +72,7 @@ export interface AlertRule {
     type: 'cost_threshold' | 'injection_detected' | 'rate_limit_hit';
     scope: 'project' | 'key';      // NEW - Required field
     gateway_key_id?: string;       // NEW - Required when scope='key'
+    gateway_key_name?: string;     // NEW - Optional field for JOIN query result
     threshold?: number;
     action: 'email' | 'webhook' | 'block';
     target?: string;
