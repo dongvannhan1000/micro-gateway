@@ -85,6 +85,8 @@ export function AlertViewer({ initialRules, projects, initialProjectId, getGatew
         try {
             const payload = {
                 type: newRule.type,
+                scope: newRule.scope,
+                gateway_key_id: newRule.scope === 'key' ? newRule.gatewayKeyId : null,
                 threshold: newRule.threshold,
                 action: newRule.action,
                 target: newRule.target
@@ -148,7 +150,7 @@ export function AlertViewer({ initialRules, projects, initialProjectId, getGatew
                     </h3>
                     <div className="space-y-4">
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                                        <div className="space-y-1.5">
+                            <div className="space-y-1.5">
                                 <label className="text-[10px] uppercase font-bold text-muted px-1">Trigger Type</label>
                                 <select
                                     className="bg-glass-bg border border-glass-border rounded-xl px-3 py-2 text-sm w-full outline-none focus:border-accent-violet/50"
@@ -157,6 +159,19 @@ export function AlertViewer({ initialRules, projects, initialProjectId, getGatew
                                 >
                                     <option value="cost_threshold">Cost Threshold ($)</option>
                                     <option value="injection_detected">Prompt Injection</option>
+                                </select>
+                            </div>
+                            <div className="space-y-1.5">
+                                <label className="text-[10px] uppercase font-bold text-muted px-1">Alert Scope</label>
+                                <select
+                                    className="bg-glass-bg border border-glass-border rounded-xl px-3 py-2 text-sm w-full outline-none focus:border-accent-violet/50"
+                                    value={newRule.scope}
+                                    onChange={e => {
+                                        setNewRule({...newRule, scope: e.target.value, gatewayKeyId: ''});
+                                    }}
+                                >
+                                    <option value="project">Project Level (All Keys)</option>
+                                    <option value="key">Specific Gateway Key</option>
                                 </select>
                             </div>
                         </div>
@@ -171,6 +186,28 @@ export function AlertViewer({ initialRules, projects, initialProjectId, getGatew
                                     value={newRule.threshold || ''}
                                     onChange={e => setNewRule({...newRule, threshold: parseFloat(e.target.value) || 0})}
                                 />
+                            </div>
+                        )}
+
+                        {newRule.scope === 'key' && (
+                            <div className="space-y-1.5">
+                                <label className="text-[10px] uppercase font-bold text-muted px-1">Gateway Key</label>
+                                <select
+                                    className="bg-glass-bg border border-glass-border rounded-xl px-3 py-2 text-sm w-full outline-none focus:border-accent-violet/50"
+                                    value={newRule.gatewayKeyId}
+                                    onChange={e => setNewRule({...newRule, gatewayKeyId: e.target.value})}
+                                >
+                                    <option value="">Select a gateway key</option>
+                                    {gatewayKeys.length === 0 ? (
+                                        <option value="" disabled>No gateway keys found</option>
+                                    ) : (
+                                        gatewayKeys.map(key => (
+                                            <option key={key.id} value={key.id}>
+                                                {key.name || `Key ${key.id.slice(-4)}`}
+                                            </option>
+                                        ))
+                                    )}
+                                </select>
                             </div>
                         )}
 
