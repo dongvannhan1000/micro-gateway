@@ -22,9 +22,10 @@ npm run dev:gateway
 # Start dashboard in dev mode
 npm run dev:dashboard
 
-# Deploy to production
+# Deploy gateway to production
 npm run deploy:gateway
-npm run deploy:dashboard
+
+# Dashboard auto-deploys on push to main (Vercel)
 ```
 
 ### Gateway API (apps/gateway-api)
@@ -64,17 +65,30 @@ npm run migrate:remote  # Apply migrations to production D1 database
 **Entry Point**: `apps/gateway-api/src/index.ts`
 
 **Middleware Stack** (applied in order):
-1. **API Key Auth** (`src/middleware/auth.ts`) - Validates gateway keys using SHA-256 hashing
-2. **Rate Limiting** (`src/middleware/rate-limit.ts`) - KV-based rate limiting per key
-3. **Anomaly Detection** (`src/middleware/anomaly.ts`) - Detects prompt injection attacks
-4. **Content Filtering** (`src/middleware/content-filter.ts`) - Filters sensitive content
+1. **Correlation ID** - Request tracing via correlation-id middleware
+2. **Metrics Collector** - Observability tracking for all requests
+3. **API Key Auth** (`src/middleware/api-key-auth.ts`) - SHA-256 hashing for gateway keys
+4. **Rate Limiting** (`src/middleware/rate-limiter.ts`) - KV-based per-key limiting
+5. **IP Rate Limiting** (`src/middleware/ip-rate-limiter.ts`) - 10 req/min per IP for auth endpoints
+6. **Circuit Breaker** (`src/middleware/circuit-breaker.ts`) - Per-project/per-provider failure detection
+7. **Request Timeout** (`src/middleware/request-timeout.ts`) - 30s max timeout
+8. **Bulkhead** (`src/middleware/bulkhead.ts`) - Concurrency limits via D1
+9. **Anomaly Detection** (`src/middleware/anomaly-handler.ts`) - Prompt injection detection
+10. **PII Scrubbing** (`src/middleware/pii-scrub.ts`) - GDPR/HIPAA data redaction
+11. **Content Filtering** (`src/middleware/content-filter.ts`) - Sensitive content filtering
 
 **Router Structure**:
 - `src/gateway/` - OpenAI-compatible proxy endpoints (`/v1/*`)
 - `src/management/` - Internal API for dashboard (`/api/management/*`)
 - `src/auth/` - Authentication endpoints (`/api/auth/*`)
 
-**Key Pattern**: The gateway uses a repository pattern (`packages/db/src/db-adapter.ts`) to abstract database operations, allowing easy database swapping. All database access goes through this adapter.
+**Resilience Patterns** (production-ready):
+- **Circuit Breaker**: Per-project/per-provider failure detection (5 failures → open, 2 successes → close)
+- **Request Timeout**: 30s max with configurable deadlines
+- **Bulkhead**: Concurrency limits tracked in D1 database
+- **Retry Logic**: 3 retries with exponential backoff for transient failures (`src/utils/retry.ts`)
+
+**Key Pattern**: Repository pattern (`apps/gateway-api/src/repositories/`) abstracts database operations. All DB access goes through D1 adapter.
 
 ### Dashboard UI Architecture
 
@@ -88,12 +102,9 @@ npm run migrate:remote  # Apply migrations to production D1 database
 
 **Authentication**: Supabase Auth (Google, GitHub, email) with JWT token storage.
 
-**Dashboard Pages**:
-- `/dashboard` - Main overview with metrics and charts
-- `/dashboard/analytics` - Detailed usage analytics
-- `/dashboard/security` - Security event logs
-- `/dashboard/alerts` - Alert configuration and history
-- `/dashboard/settings` - API key management and settings
+**Dashboard Pages**: `/dashboard` (overview), `/dashboard/analytics`, `/dashboard/security`, `/dashboard/alerts`, `/dashboard/settings`, `/dashboard/projects/[id]`
+
+**Alert System** (`src/services/alert-engine.ts`): Project-level or key-level cost thresholds, security alerts, email notifications via Resend.
 
 ### Database Layer
 
@@ -101,71 +112,81 @@ npm run migrate:remote  # Apply migrations to production D1 database
 
 **Pricing Logic**: `packages/db/src/pricing.ts` - Cost calculation for OpenAI, Anthropic, Google, DeepSeek providers
 
-**Migrations**: `packages/db/migrations/` - Database schema versioning (applied via wrangler d1 commands)
+**Migrations**: `packages/db/migrations/` - Applied via wrangler d1 commands
+**Database Bindings**: `apps/gateway-api/wrangler.toml` with `[[d1_databases]]` section
 
-**Database Bindings**: Configured in `apps/gateway-api/wrangler.toml` with `[[d1_databases]]` section
+**Cron System** (`src/cron/scheduled-dispatcher.ts`):
+- **Monthly Reset**: 1st day of every month (resets usage tracking)
+- **Health Checks**: Every 5 minutes (provider availability)
+- Note: Cloudflare Workers allows only ONE `scheduled` export
 
 ## Configuration Files
 
 ### Cloudflare Worker Configuration
-`apps/gateway-api/wrangler.toml` - Defines:
-- D1 database bindings
-- KV namespace bindings
-- Environment variables (SUPABASE_URL, SUPABASE_JWT_SECRET, ENCRYPTION_SECRET, RESEND_API_KEY)
+`apps/gateway-api/wrangler.toml`:
+- D1 database bindings (`[[d1_databases]]`)
+- KV namespace bindings (`[[kv_namespaces]]`)
+- Cron triggers (`[triggers] crons = ["0 0 1 * *", "*/5 * * * *"]`)
+- Observability traces (10% sampling)
+- Environment vars: `ENVIRONMENT`, `SUPABASE_URL`
+
+### Environment Variables (Required)
+Set in `.dev.vars` (local) or Cloudflare secrets (production):
+- `SUPABASE_URL` - Supabase project URL
+- `SUPABASE_JWT_SECRET` - JWT verification (1-hour max token age)
+- `ENCRYPTION_SECRET` - API key encryption (generate: `openssl rand -base64 32`)
+- `RESEND_API_KEY` - Email notifications
 
 ### TypeScript Configurations
-- Gateway targets ES2022 with Cloudflare Workers types
-- Dashboard uses Next.js standard config with path aliases (`@/` for `src/`)
-
-### Environment Variables
-Required in `.dev.vars` for local development or Cloudflare environment secrets:
-- `SUPABASE_URL` - Supabase project URL
-- `SUPABASE_JWT_SECRET` - JWT secret for auth token verification
-- `ENCRYPTION_SECRET` - Secret for API key encryption
-- `RESEND_API_KEY` - Email service API key
+- Gateway: ES2022 with Cloudflare Workers types
+- Dashboard: Next.js standard with path aliases (`@/` → `src/`)
 
 ## Important Implementation Details
 
 ### API Key Management
-- Gateway keys are hashed using SHA-256 before storage
-- Keys are encrypted at rest using the ENCRYPTION_SECRET
-- Each key has associated rate limits and cost budgets
+- Gateway keys: SHA-256 hashed before storage
+- Provider keys: AES-256-GCM encrypted at rest (per-user encryption keys)
+- Each key has rate limits and cost budgets
 
 ### Rate Limiting Strategy
-- Uses Cloudflare KV for distributed counter storage
-- Rate limits are configurable per API key
-- Window-based limiting (requests per time period)
+- Cloudflare KV for distributed counters
+- Per-key configurable limits (requests per time period)
+- IP-based limiting for auth endpoints (10 req/min)
 
-### Anomaly Detection
-- Pattern-based detection for prompt injection attacks
-- Heuristics for suspicious request patterns
-- Logs security events to database for dashboard review
+### Anomaly Detection (`src/security/`)
+- Pattern-based detection for prompt injection (`injection-patterns.ts`, `injection-scorer.ts`)
+- Heuristics for suspicious patterns
+- Security events logged to D1 for dashboard review
 
-### Provider Routing
-- OpenAI-compatible interface (`/v1/chat/completions`, `/v1/models`, etc.)
-- Routes requests to appropriate provider based on model name
+### Provider Routing (`src/gateway/model-router.ts`)
+- OpenAI-compatible interface: `/v1/chat/completions`, `/v1/models`, etc.
+- Routes to provider based on model name
 - Supports streaming responses (Server-Sent Events)
+- Providers: OpenAI, Anthropic, Google, DeepSeek, Groq, Together AI
 
-### Database Migrations
-Always run migrations after schema changes:
+### Observability
+- Correlation ID middleware traces all requests
+- Metrics collector tracks request patterns
+- Cloudflare Workers Traces enabled (10% sampling)
+- Structured logging format: `[Service] Action: description (Metadata: key=value)`
+
+## Testing
+
+**Framework**: Vitest
+**Structure**: Tests alongside source files (`.test.ts` suffix)
+**Coverage**: 305 tests (100% success rate)
+
 ```bash
-# For local development
-cd packages/db && npm run migrate:local
+# Run all gateway tests
+cd apps/gateway-api && npm run test
 
-# For production
-cd packages/db && npm run migrate:remote
+# Run specific test file
+npx vitest src/middleware/circuit-breaker.test.ts
 ```
 
-## Testing Strategy
-
-**Unit Tests**: Located alongside source files with `.test.ts` suffix
-**Test Framework**: Vitest
-**Run Tests**: `npm run test` from `apps/gateway-api/`
+**Security Tests**: Comprehensive penetration testing suite (96.6% success rate)
+**Performance Tests**: k6 load tests in `load-tests/` directory
 
 ## Design System
 
-The dashboard uses a custom design system with:
-- **Glassmorphism**: Translucent backgrounds with blur effects
-- **Neon Accents**: High-contrast colors for CTAs and highlights
-- **Dark Theme**: Default dark mode optimized for developer tools
-- **Responsive**: Mobile-first design with Tailwind CSS v4
+Dashboard: Glassmorphism with neon accents, dark theme, mobile-first with Tailwind CSS v4.

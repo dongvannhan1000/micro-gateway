@@ -9,8 +9,8 @@
     "dev:gateway": "npm run dev --workspace=@ms-gateway/api",
     "dev:dashboard": "npm run dev --workspace=@ms-gateway/dashboard",
     "deploy:gateway": "npm run deploy --workspace=@ms-gateway/api",
-    "deploy:dashboard": "npm run deploy --workspace=@ms-gateway/dashboard",
-    "dev": "concurrently \"npm run dev:gateway\" \"npm run dev:dashboard\""
+    "dev": "concurrently \"npm run dev:gateway\" \"npm run dev:dashboard\"",
+    "test": "npm test --workspace=@ms-gateway/api"
   },
   "devDependencies": {
     "concurrently": "^9.2.1"
