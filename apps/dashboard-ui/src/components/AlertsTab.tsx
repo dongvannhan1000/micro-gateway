@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { Bell, Plus, Trash2, AlertTriangle, Loader2 } from 'lucide-react';
+import { FormSelect } from '@/components/dashboard/FormSelect';
 
 const GATEWAY_URL = process.env.NEXT_PUBLIC_GATEWAY_URL || 'http://localhost:8787';
 
@@ -179,71 +180,58 @@ export function AlertsTab({ projectId, token }: AlertsTabProps) {
           <h3 className="font-semibold text-lg">Create Alert Rule</h3>
 
           {/* Alert Type */}
-          <div className="space-y-2">
-            <label className="text-xs font-bold text-muted uppercase tracking-widest">
-              Alert Type
-            </label>
-            <select
-              value={type}
-              onChange={(e) => setType(e.target.value as any)}
-              className="input-field bg-background/30"
-              required
-            >
-              <option value="cost_threshold">Cost Threshold</option>
-              <option value="injection_detected">Prompt Injection Detected</option>
-            </select>
-          </div>
+          <FormSelect
+            label="Alert Type"
+            value={type}
+            onChange={(value) => setType(value as any)}
+            options={[
+              { value: 'cost_threshold', label: 'Cost Threshold' },
+              { value: 'injection_detected', label: 'Prompt Injection Detected' }
+            ]}
+            placeholder="Select alert type"
+            required
+            accentColor="blue"
+          />
 
           {/* Scope Selector */}
-          <div className="space-y-2">
-            <label className="text-xs font-bold text-muted uppercase tracking-widest flex items-center gap-2">
-              Alert Scope <span className="text-red-400">*</span>
-            </label>
-            <select
-              value={scope}
-              onChange={(e) => {
-                setScope(e.target.value as AlertScope);
-                if (e.target.value === 'project') {
-                  setGatewayKeyId('');
-                }
-              }}
-              className="input-field bg-background/30"
-              required
-            >
-              <option value="project">Project Level (All Keys)</option>
-              <option value="key">Specific Gateway Key</option>
-            </select>
-            <p className="text-xs text-muted">
-              {scope === 'project'
-                ? 'Alert will trigger based on total usage across ALL gateway keys in this project'
-                : 'Alert will trigger based on usage of a specific gateway key'}
-            </p>
-          </div>
+          <FormSelect
+            label="Alert Scope"
+            value={scope}
+            onChange={(value) => {
+              setScope(value as AlertScope);
+              if (value === 'project') {
+                setGatewayKeyId('');
+              }
+            }}
+            options={[
+              { value: 'project', label: 'Project Level (All Keys)' },
+              { value: 'key', label: 'Specific Gateway Key' }
+            ]}
+            placeholder="Select scope"
+            required
+            accentColor="blue"
+            helperText={scope === 'project'
+              ? 'Alert will trigger based on total usage across ALL gateway keys in this project'
+              : 'Alert will trigger based on usage of a specific gateway key'}
+          />
 
           {/* Key Selector (conditional) */}
           {scope === 'key' && (
-            <div className="space-y-2">
-              <label className="text-xs font-bold text-muted uppercase tracking-widest flex items-center gap-2">
-                Select Gateway Key <span className="text-red-400">*</span>
-              </label>
-              <select
-                value={gatewayKeyId}
-                onChange={(e) => setGatewayKeyId(e.target.value)}
-                className="input-field bg-background/30"
-                required
-              >
-                <option value="">Select a key...</option>
-                {keys.map((key) => (
-                  <option
-                    key={key.id}
-                    value={key.id}
-                    title={`Spent: $${key.current_month_usage_usd.toFixed(2)} / Limit: $${key.monthly_limit_usd}`}
-                  >
-                    {key.name} (${key.current_month_usage_usd.toFixed(2)} / ${key.monthly_limit_usd})
-                  </option>
-                ))}
-              </select>
-            </div>
+            <FormSelect
+              label="Select Gateway Key"
+              value={gatewayKeyId}
+              onChange={(value) => setGatewayKeyId(value)}
+              options={[
+                { value: '', label: 'Select a key...' },
+                ...keys.map((key) => ({
+                  value: key.id,
+                  label: `${key.name} ($${key.current_month_usage_usd.toFixed(2)} / $${key.monthly_limit_usd})`
+                }))
+              ]}
+              placeholder="Select a key..."
+              required
+              accentColor="blue"
+            />
           )}
 
           {/* Threshold (only for cost_threshold) */}
@@ -265,20 +253,18 @@ export function AlertsTab({ projectId, token }: AlertsTabProps) {
           )}
 
           {/* Action */}
-          <div className="space-y-2">
-            <label className="text-xs font-bold text-muted uppercase tracking-widest">
-              Action
-            </label>
-            <select
-              value={action}
-              onChange={(e) => setAction(e.target.value as any)}
-              className="input-field bg-background/30"
-              required
-            >
-              <option value="email">Send Email</option>
-              <option value="webhook">Webhook (Coming Soon)</option>
-            </select>
-          </div>
+          <FormSelect
+            label="Action"
+            value={action}
+            onChange={(value) => setAction(value as any)}
+            options={[
+              { value: 'email', label: 'Send Email' },
+              { value: 'webhook', label: 'Webhook (Coming Soon)' }
+            ]}
+            placeholder="Select action"
+            required
+            accentColor="blue"
+          />
 
           {/* Target (email) */}
           {action === 'email' && (

@@ -5,6 +5,7 @@ import { Bell, Plus, Trash2, ShieldAlert, DollarSign, AlertCircle, FolderIcon, K
 import { createAlertRule, deleteAlertRule, getAlertRules } from '../actions';
 import { clsx } from 'clsx';
 import { ProjectSelector } from '@/components/dashboard/ProjectSelector';
+import { FormSelect } from '@/components/dashboard/FormSelect';
 
 interface AlertViewerProps {
     initialRules: any[];
@@ -147,30 +148,28 @@ export function AlertViewer({ initialRules, projects, initialProjectId, getGatew
                     </h3>
                     <div className="space-y-4">
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <div className="space-y-1.5">
-                                <label className="text-[10px] uppercase font-bold text-muted px-1">Trigger Type</label>
-                                <select
-                                    className="bg-glass-bg border border-glass-border rounded-xl px-3 py-2 text-sm w-full outline-none focus:border-accent-violet/50"
-                                    value={newRule.type}
-                                    onChange={e => setNewRule({...newRule, type: e.target.value as any})}
-                                >
-                                    <option value="cost_threshold">Cost Threshold ($)</option>
-                                    <option value="injection_detected">Prompt Injection</option>
-                                </select>
-                            </div>
-                            <div className="space-y-1.5">
-                                <label className="text-[10px] uppercase font-bold text-muted px-1">Alert Scope</label>
-                                <select
-                                    className="bg-glass-bg border border-glass-border rounded-xl px-3 py-2 text-sm w-full outline-none focus:border-accent-violet/50"
-                                    value={newRule.scope}
-                                    onChange={e => {
-                                        setNewRule({...newRule, scope: e.target.value, gatewayKeyId: ''});
-                                    }}
-                                >
-                                    <option value="project">Project Level (All Keys)</option>
-                                    <option value="key">Specific Gateway Key</option>
-                                </select>
-                            </div>
+                            <FormSelect
+                                label="Trigger Type"
+                                value={newRule.type}
+                                onChange={(value) => setNewRule({ ...newRule, type: value as any })}
+                                options={[
+                                    { value: 'cost_threshold', label: 'Cost Threshold ($)' },
+                                    { value: 'injection_detected', label: 'Prompt Injection' }
+                                ]}
+                                placeholder="Select trigger type"
+                                accentColor="violet"
+                            />
+                            <FormSelect
+                                label="Alert Scope"
+                                value={newRule.scope}
+                                onChange={(value) => setNewRule({ ...newRule, scope: value, gatewayKeyId: '' })}
+                                options={[
+                                    { value: 'project', label: 'Project Level (All Keys)' },
+                                    { value: 'key', label: 'Specific Gateway Key' }
+                                ]}
+                                placeholder="Select scope"
+                                accentColor="violet"
+                            />
                         </div>
 
                         {newRule.type === 'cost_threshold' && (
@@ -187,39 +186,35 @@ export function AlertViewer({ initialRules, projects, initialProjectId, getGatew
                         )}
 
                         {newRule.scope === 'key' && (
-                            <div className="space-y-1.5">
-                                <label className="text-[10px] uppercase font-bold text-muted px-1">Gateway Key</label>
-                                <select
-                                    className="bg-glass-bg border border-glass-border rounded-xl px-3 py-2 text-sm w-full outline-none focus:border-accent-violet/50"
-                                    value={newRule.gatewayKeyId}
-                                    onChange={e => setNewRule({...newRule, gatewayKeyId: e.target.value})}
-                                >
-                                    <option value="">Select a gateway key</option>
-                                    {gatewayKeys.length === 0 ? (
-                                        <option value="" disabled>No gateway keys found</option>
-                                    ) : (
-                                        gatewayKeys.map(key => (
-                                            <option key={key.id} value={key.id}>
-                                                {key.name || `Key ${key.id.slice(-4)}`}
-                                            </option>
-                                        ))
-                                    )}
-                                </select>
-                            </div>
+                            <FormSelect
+                                label="Gateway Key"
+                                value={newRule.gatewayKeyId}
+                                onChange={(value) => setNewRule({ ...newRule, gatewayKeyId: value })}
+                                options={[
+                                    { value: '', label: 'Select a gateway key', disabled: gatewayKeys.length === 0 },
+                                    ...gatewayKeys.map(key => ({
+                                        value: key.id,
+                                        label: key.name || `Key ${key.id.slice(-4)}`
+                                    }))
+                                ]}
+                                placeholder="Select a gateway key"
+                                accentColor="violet"
+                                error={gatewayKeys.length === 0 ? 'No gateway keys available' : undefined}
+                            />
                         )}
 
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <div className="space-y-1.5">
-                                <label className="text-[10px] uppercase font-bold text-muted px-1">Action Type</label>
-                                <select
-                                    className="bg-glass-bg border border-glass-border rounded-xl px-3 py-2 text-sm w-full outline-none focus:border-accent-violet/50"
-                                    value={newRule.action}
-                                    onChange={e => setNewRule({...newRule, action: e.target.value as any, target: ''})}
-                                >
-                                    <option value="email">Send Email</option>
-                                    <option value="webhook">Call Webhook</option>
-                                </select>
-                            </div>
+                            <FormSelect
+                                label="Action Type"
+                                value={newRule.action}
+                                onChange={(value) => setNewRule({ ...newRule, action: value as any, target: '' })}
+                                options={[
+                                    { value: 'email', label: 'Send Email' },
+                                    { value: 'webhook', label: 'Call Webhook' }
+                                ]}
+                                placeholder="Select action type"
+                                accentColor="violet"
+                            />
                             <div className="space-y-1.5">
                                 <label className="text-[10px] uppercase font-bold text-muted px-1">
                                     {newRule.action === 'email' ? 'Email Address' : 'Webhook URL'}
