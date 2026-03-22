@@ -44,6 +44,9 @@ npm run dev:dashboard
 # Start both services simultaneously
 npm run dev
 
+# Docker: Start dashboard in container (gateway must run via wrangler dev)
+docker-compose up dashboard
+
 # Deploy gateway to production
 npm run deploy:gateway
 
@@ -261,6 +264,65 @@ nano .dev.vars  # or use your preferred editor
 - Install Git for Windows which includes OpenSSL
 - Or use WSL (Windows Subsystem for Linux)
 - Setup script will fallback to Node.js crypto module
+
+## Docker Setup
+
+### Quick Docker Commands
+```bash
+# Start Dashboard UI in Docker (development mode)
+docker-compose up dashboard
+
+# Start in background
+docker-compose up -d dashboard
+
+# View logs
+docker-compose logs -f dashboard
+
+# Stop services
+docker-compose down
+
+# Rebuild after dependency changes
+docker-compose build --no-cache dashboard
+```
+
+### Docker Architecture
+**Hybrid Approach** (Recommended):
+- **Dashboard UI**: Runs in Docker container (Next.js 15)
+- **Gateway API**: Runs on host via `wrangler dev` (Cloudflare Workers runtime)
+
+**Why this approach?**
+Cloudflare Workers cannot run in Docker directly because they require:
+- Cloudflare's edge runtime environment
+- Specific Workers APIs (Request, Response, FetchEvent, etc.)
+- D1 database bindings
+- KV namespace bindings
+
+### Environment Configuration for Docker
+```bash
+# Copy Docker environment template
+cp apps/dashboard-ui/.env.docker apps/dashboard-ui/.env
+
+# Edit with your Supabase credentials
+nano apps/dashboard-ui/.env
+```
+
+**Required variables:**
+```bash
+NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your-supabase-anon-key
+NEXT_PUBLIC_GATEWAY_URL=http://host.docker.internal:8787
+```
+
+### Production Docker Deployment
+```bash
+# Build production image
+docker-compose -f docker-compose.prod.yml build
+
+# Start production container
+docker-compose -f docker-compose.prod.yml up -d
+```
+
+**See [DOCKER.md](./DOCKER.md)** for complete Docker documentation including troubleshooting, security, and performance optimization.
 
 ## Design System
 

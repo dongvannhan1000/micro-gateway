@@ -1,0 +1,44 @@
+version: '3.8'
+
+services:
+  dashboard:
+    build:
+      context: .
+      dockerfile: apps/dashboard-ui/Dockerfile
+    container_name: ms-gateway-dashboard
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=development
+      # Supabase configuration (from host environment)
+      - NEXT_PUBLIC_SUPABASE_URL=${NEXT_PUBLIC_SUPABASE_URL:-http://host.docker.internal:3000}
+      - NEXT_PUBLIC_SUPABASE_ANON_KEY=${NEXT_PUBLIC_SUPABASE_ANON_KEY}
+      # Gateway URL (running on host machine via wrangler dev)
+      - NEXT_PUBLIC_GATEWAY_URL=${NEXT_PUBLIC_GATEWAY_URL:-http://host.docker.internal:8787}
+      # App configuration
+      - NEXT_PUBLIC_APP_NAME=${NEXT_PUBLIC_APP_NAME:-Micro-Security Gateway}
+      - NEXT_PUBLIC_APP_URL=${NEXT_PUBLIC_APP_URL:-http://localhost:3000}
+    volumes:
+      # Mount source code for hot-reload in development
+      - ./apps/dashboard-ui/src:/app/src:ro
+      - ./apps/dashboard-ui/public:/app/public:ro
+      - ./apps/dashboard-ui/package.json:/app/package.json:ro
+      - ./apps/dashboard-ui/tsconfig.json:/app/tsconfig.json:ro
+      - ./apps/dashboard-ui/next.config.ts:/app/next.config.ts:ro
+      - ./apps/dashboard-ui/postcss.config.mjs:/app/postcss.config.mjs:ro
+      - ./apps/dashboard-ui/tailwind.config.js:/app/tailwind.config.js:ro
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3000"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    networks:
+      - ms-gateway-network
+    restart: unless-stopped
+
+networks:
+  ms-gateway-network:
+    driver: bridge

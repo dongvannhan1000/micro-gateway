@@ -60,7 +60,31 @@ All critical security vulnerabilities have been fixed and verified through compr
 
 ## Quick Start
 
-### One-Command Local Setup (5 minutes)
+### Option 1: Docker Setup (Recommended for Dashboard)
+
+```bash
+# Clone repository
+git clone https://github.com/dongvannhan1000/micro-gateway.git
+cd micro-gateway
+
+# Configure environment
+cp apps/dashboard-ui/.env.docker apps/dashboard-ui/.env
+# Edit apps/dashboard-ui/.env with your Supabase credentials
+
+# Start Gateway API on host (Terminal 1)
+npm run dev:gateway
+
+# Start Dashboard UI in Docker (Terminal 2)
+docker-compose up dashboard
+```
+
+**Access your gateway:**
+- Dashboard UI: http://localhost:3000
+- Gateway API: http://localhost:8787
+
+**[🐳 Docker Documentation](./DOCKER.md)** - Complete Docker setup guide
+
+### Option 2: One-Command Local Setup (5 minutes)
 
 ```bash
 # Clone and run automated setup
@@ -211,6 +235,7 @@ curl https://your-gateway.workers.dev/v1/chat/completions \
 
 ## Documentation
 
+- [**DOCKER.md**](./DOCKER.md) - Docker setup and configuration
 - [**SELF_HOSTED.md**](./SELF_HOSTED.md) - Deployment guide
 - [**SECURITY.md**](./SECURITY.md) - Security architecture
 - [**CONTRIBUTING.md**](./CONTRIBUTING.md) - Contribution guidelines
