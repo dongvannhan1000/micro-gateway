@@ -60,7 +60,30 @@ All critical security vulnerabilities have been fixed and verified through compr
 
 ## Quick Start
 
-### Self-Hosted Deployment (5 minutes)
+### One-Command Local Setup (5 minutes)
+
+```bash
+# Clone and run automated setup
+git clone https://github.com/dongvannhan1000/micro-gateway.git
+cd micro-gateway
+npm run setup
+```
+
+The setup script automatically:
+- ✓ Verifies prerequisites (Node.js, npm)
+- ✓ Creates environment configuration (.dev.vars)
+- ✓ Generates encryption secret
+- ✓ Installs all dependencies
+- ✓ Runs database migrations
+- ✓ Starts both Gateway API (port 8787) and Dashboard UI (port 3000)
+
+**Access your gateway:**
+- Dashboard UI: http://localhost:3000
+- Gateway API: http://localhost:8787
+
+**[📖 Detailed Setup Guide](./docs/SETUP.md)** - Troubleshooting and manual setup instructions
+
+### Self-Hosted Deployment (Production)
 
 ```bash
 # 1. Clone and install
