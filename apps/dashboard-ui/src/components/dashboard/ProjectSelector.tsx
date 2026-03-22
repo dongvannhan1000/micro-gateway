@@ -125,7 +125,7 @@ export function ProjectSelector({ projects, selectedId, onSelect, accentColor = 
                     "w-full flex items-center gap-2 px-3 py-2 text-sm text-left transition-all duration-150",
                     "hover:bg-glass-bg/50",
                     project.id === selectedId ? accentBgClass : "",
-                    focusedIndex === index ? "bg-glass-bg/70 outline-none ring-1 ring-inset ring-accent-blue/30" : ""
+                    focusedIndex === index ? `bg-glass-bg/70 outline-none ring-1 ring-inset ${accentRingClass}` : ""
                   )}
                   role="option"
                   aria-selected={project.id === selectedId}
