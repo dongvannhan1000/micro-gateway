@@ -1,13 +1,15 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Settings, Shield, TrendingUp, Bell, User } from 'lucide-react';
+import { Settings, TrendingUp, User } from 'lucide-react';
+import { clsx } from 'clsx';
 import { ProfileSection } from '@/components/settings/ProfileSection';
 import { UsageSection } from '@/components/settings/UsageSection';
-import { SecuritySection } from '@/components/settings/SecuritySection';
-import { NotificationsSection } from '@/components/settings/NotificationsSection';
+// Keep these files but don't import - for future use
+// import { SecuritySection } from '@/components/settings/SecuritySection';
+// import { NotificationsSection } from '@/components/settings/NotificationsSection';
 
-type TabType = 'profile' | 'usage' | 'security' | 'notifications';
+type TabType = 'profile' | 'usage';
 
 export default function SettingsPage() {
     const [activeTab, setActiveTab] = useState<TabType>('profile');
@@ -15,8 +17,6 @@ export default function SettingsPage() {
     const tabs = [
         { id: 'profile' as TabType, name: 'Profile', icon: User },
         { id: 'usage' as TabType, name: 'Usage', icon: TrendingUp },
-        { id: 'security' as TabType, name: 'Security', icon: Shield },
-        { id: 'notifications' as TabType, name: 'Notifications', icon: Bell },
     ];
 
     return (
@@ -53,10 +53,20 @@ export default function SettingsPage() {
 
                 {/* Main content area */}
                 <div className="lg:col-span-3">
-                    {activeTab === 'profile' && <ProfileSection />}
-                    {activeTab === 'usage' && <UsageSection />}
-                    {activeTab === 'security' && <SecuritySection />}
-                    {activeTab === 'notifications' && <NotificationsSection />}
+                  <div className="relative min-h-[500px]">
+                    <div className={clsx(
+                      "absolute inset-0 transition-opacity duration-250",
+                      activeTab === 'profile' ? "opacity-100 z-10" : "opacity-0 pointer-events-none"
+                    )}>
+                      <ProfileSection />
+                    </div>
+                    <div className={clsx(
+                      "absolute inset-0 transition-opacity duration-250",
+                      activeTab === 'usage' ? "opacity-100 z-10" : "opacity-0 pointer-events-none"
+                    )}>
+                      <UsageSection />
+                    </div>
+                  </div>
                 </div>
             </div>
         </div>
