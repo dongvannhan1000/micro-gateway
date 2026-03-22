@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import { ShieldAlert, Terminal, Clock, ExternalLink, Search } from 'lucide-react';
 import { getSecurityLogs } from '../actions';
 import { clsx } from 'clsx';
+import { ProjectSelector } from '@/components/dashboard/ProjectSelector';
 
 interface SecurityLogViewerProps {
     initialLogs: any[];
@@ -29,8 +30,7 @@ export function SecurityLogViewer({ initialLogs, projects, initialProjectId }: S
         }
     };
 
-    const handleProjectChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-        const id = e.target.value;
+    const handleProjectChange = (id: string) => {
         setSelectedProjectId(id);
         loadLogs(id);
     };
@@ -48,19 +48,15 @@ export function SecurityLogViewer({ initialLogs, projects, initialProjectId }: S
                     <p className="text-muted mt-1">Monitor blocked requests and prompt injection detection events.</p>
                 </div>
                 <div className="flex items-center gap-3">
-                    <select 
-                        value={selectedProjectId}
-                        onChange={handleProjectChange}
-                        className="bg-glass-bg border border-glass-border px-3 py-1.5 rounded-xl text-xs font-bold focus:ring-accent-blue/50 outline-none h-9"
-                    >
-                        {projects.length === 0 ? (
-                            <option value="">No projects found</option>
-                        ) : (
-                            projects.map(p => (
-                                <option key={p.id} value={p.id}>{p.name}</option>
-                            ))
-                        )}
-                    </select>
+                    <ProjectSelector
+                        projects={projects}
+                        selectedId={selectedProjectId}
+                        onSelect={(id) => {
+                            setSelectedProjectId(id);
+                            loadLogs(id);
+                        }}
+                        accentColor="blue"
+                    />
                     <div className="bg-glass-bg border border-glass-border px-3 py-1.5 rounded-xl flex items-center gap-2 h-9">
                         <Search className="w-4 h-4 text-muted" />
                         <input 
