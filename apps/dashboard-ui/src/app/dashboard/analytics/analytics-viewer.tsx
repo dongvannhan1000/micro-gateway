@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import { Activity, DollarSign, Clock, ShieldAlert, BarChart3, ChevronRight, MessageSquare, MessageCircle } from 'lucide-react';
 import { StatsCard } from '@/components/dashboard/stats-card';
 import { UsageChart } from '@/components/dashboard/usage-chart';
+import { ProjectSelector } from '@/components/dashboard/ProjectSelector';
 import { getAnalyticsSummary, getUsageData } from '../actions';
 import { clsx } from 'clsx';
 
@@ -36,8 +37,7 @@ export function AnalyticsViewer({ initialSummary, initialUsage, projects, initia
         }
     };
 
-    const handleProjectChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-        const id = e.target.value;
+    const handleProjectChange = (id: string) => {
         setSelectedProjectId(id);
         if (id) {
             loadData(id);
@@ -52,22 +52,12 @@ export function AnalyticsViewer({ initialSummary, initialUsage, projects, initia
                     <p className="text-muted mt-1">Real-time performance and cost monitoring across your gateways.</p>
                 </div>
                 <div className="flex items-center gap-3">
-                    <select 
-                        value={selectedProjectId}
-                        onChange={handleProjectChange}
-                        className="bg-glass-bg border border-glass-border px-3 py-1.5 rounded-xl text-xs font-bold focus:ring-accent-blue/50 outline-none h-9"
-                    >
-                        {projects.length === 0 ? (
-                            <option value="">No projects found</option>
-                        ) : (
-                            <>
-                                <option value="" disabled>Select a project</option>
-                                {projects.map(p => (
-                                    <option key={p.id} value={p.id}>{p.name}</option>
-                                ))}
-                            </>
-                        )}
-                    </select>
+                    <ProjectSelector
+                        projects={projects}
+                        selectedId={selectedProjectId}
+                        onSelect={handleProjectChange}
+                        accentColor="blue"
+                    />
                     <div className="flex items-center gap-2 bg-glass-bg border border-glass-border p-1 rounded-xl h-9">
                         <button className="px-4 py-1.5 text-[10px] font-bold rounded-lg bg-accent-blue text-white shadow-lg shadow-accent-blue/20 transition-all uppercase tracking-wider">Last 30 Days</button>
                     </div>
