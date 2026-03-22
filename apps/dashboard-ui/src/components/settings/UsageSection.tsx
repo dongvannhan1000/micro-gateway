@@ -312,7 +312,7 @@ export function UsageSection() {
                     </div>
                     <div className="mt-4">
                         <QuotaProgress
-                            label="Gateway Keys (Calendar Month)"
+                            label="Gateway Keys"
                             used={quotas.limits.gateway_keys?.current || 0}
                             total={quotas.limits.gateway_keys?.max || 3}
                             unit="keys"
