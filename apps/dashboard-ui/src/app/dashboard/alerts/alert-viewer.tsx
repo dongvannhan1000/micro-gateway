@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { Bell, Plus, Trash2, ShieldAlert, DollarSign, AlertCircle, FolderIcon, KeyIcon, MailIcon, Link2Icon } from 'lucide-react';
 import { createAlertRule, deleteAlertRule, getAlertRules } from '../actions';
 import { clsx } from 'clsx';
+import { ProjectSelector } from '@/components/dashboard/ProjectSelector';
 
 interface AlertViewerProps {
     initialRules: any[];
@@ -55,8 +56,7 @@ export function AlertViewer({ initialRules, projects, initialProjectId, getGatew
         }
     };
 
-    const handleProjectChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-        const id = e.target.value;
+    const handleProjectChange = (id: string) => {
         setSelectedProjectId(id);
         if (id) loadRules(id);
     };
@@ -125,23 +125,13 @@ export function AlertViewer({ initialRules, projects, initialProjectId, getGatew
                     <p className="text-muted mt-1">Configure automated notifications for cost and security events.</p>
                 </div>
                 <div className="flex items-center gap-3">
-                    <select 
-                        value={selectedProjectId}
-                        onChange={handleProjectChange}
-                        className="bg-glass-bg border border-glass-border px-3 py-1.5 rounded-xl text-xs font-bold focus:ring-accent-violet/50 outline-none h-9"
-                    >
-                        {projects.length === 0 ? (
-                            <option value="">No projects found</option>
-                        ) : (
-                            <>
-                                <option value="" disabled>Select a project</option>
-                                {projects.map(p => (
-                                    <option key={p.id} value={p.id}>{p.name}</option>
-                                ))}
-                            </>
-                        )}
-                    </select>
-                    <button 
+                    <ProjectSelector
+                        projects={projects}
+                        selectedId={selectedProjectId}
+                        onSelect={handleProjectChange}
+                        accentColor="violet"
+                    />
+                    <button
                         onClick={() => setIsAdding(true)}
                         className="bg-accent-violet/10 hover:bg-accent-violet/20 text-accent-violet px-4 py-1.5 h-9 rounded-xl border border-accent-violet/30 font-bold transition-all flex items-center gap-2 text-xs"
                     >
