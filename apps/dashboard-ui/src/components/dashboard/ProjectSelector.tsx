@@ -108,7 +108,7 @@ export function ProjectSelector({ projects, selectedId, onSelect, accentColor = 
       {/* Dropdown Menu */}
       {isOpen && (
         <div
-          className="absolute right-0 mt-2 w-full min-w-[200px] bg-glass-bg border border-glass-border rounded-xl shadow-lg z-50 animate-in slide-in-from-top-2 duration-200"
+          className="absolute right-0 mt-2 w-full min-w-[200px] bg-background border border-glass-border rounded-xl shadow-lg z-50 animate-in slide-in-from-top-2 duration-200"
           role="listbox"
         >
           <div className="py-1 max-h-64 overflow-y-auto">

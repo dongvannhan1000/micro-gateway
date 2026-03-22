@@ -156,7 +156,7 @@ export function FormSelect({
         {/* Dropdown Menu */}
         {isOpen && !disabled && (
           <div
-            className="absolute z-50 mt-1 w-full bg-glass-bg border border-glass-border rounded-xl shadow-lg animate-in slide-in-from-top-1 duration-150"
+            className="absolute z-50 mt-1 w-full bg-background border border-glass-border rounded-xl shadow-lg animate-in slide-in-from-top-1 duration-150"
             role="listbox"
           >
             <div className="py-1 max-h-60 overflow-y-auto">
