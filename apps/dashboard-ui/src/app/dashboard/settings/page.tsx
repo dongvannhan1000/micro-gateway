@@ -55,13 +55,13 @@ export default function SettingsPage() {
                 <div className="lg:col-span-3">
                   <div className="relative min-h-[500px]">
                     <div className={clsx(
-                      "absolute inset-0 transition-opacity duration-250",
+                      "absolute inset-0 transition-opacity duration-[250ms] ease-in-out",
                       activeTab === 'profile' ? "opacity-100 z-10" : "opacity-0 pointer-events-none"
                     )}>
                       <ProfileSection />
                     </div>
                     <div className={clsx(
-                      "absolute inset-0 transition-opacity duration-250",
+                      "absolute inset-0 transition-opacity duration-[250ms] ease-in-out",
                       activeTab === 'usage' ? "opacity-100 z-10" : "opacity-0 pointer-events-none"
                     )}>
                       <UsageSection />
