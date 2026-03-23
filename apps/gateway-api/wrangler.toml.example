@@ -1,0 +1,30 @@
+name = "gateway-api"
+main = "src/index.ts"
+compatibility_date = "2024-03-10"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "ms-gateway-db"
+database_id = "REPLACE_WITH_YOUR_D1_DATABASE_ID"
+migrations_dir = "../../packages/db/migrations"
+
+[[kv_namespaces]]
+binding = "RATE_LIMIT_KV"
+id = "REPLACE_WITH_YOUR_KV_NAMESPACE_ID"
+
+[vars]
+ENVIRONMENT = "production"
+SUPABASE_URL = "https://your-project.supabase.co"
+# SUPABASE_JWT_SECRET will be added as a secret via wrangler secret put
+
+# Cron Triggers
+# Scheduled Tasks: https://developers.cloudflare.com/workers/configuration/cron-triggers/
+[triggers]
+crons = ["0 0 1 * *", "*/5 * * * *"]
+
+# Observability - Cloudflare Workers Traces
+# Automatic instrumentation with OpenTelemetry compatibility
+# Free during beta (until March 1, 2026)
+[observability.traces]
+enabled = true
+head_sampling_rate = 0.1  # Sample 10% of requests for traces
