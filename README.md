@@ -60,7 +60,54 @@ All critical security vulnerabilities have been fixed and verified through compr
 
 ## Quick Start
 
-### Self-Hosted Deployment (5 minutes)
+### Option 1: Docker Setup (Recommended for Dashboard)
+
+```bash
+# Clone repository
+git clone https://github.com/dongvannhan1000/micro-gateway.git
+cd micro-gateway
+
+# Configure environment
+cp apps/dashboard-ui/.env.docker apps/dashboard-ui/.env
+# Edit apps/dashboard-ui/.env with your Supabase credentials
+
+# Start Gateway API on host (Terminal 1)
+npm run dev:gateway
+
+# Start Dashboard UI in Docker (Terminal 2)
+docker-compose up dashboard
+```
+
+**Access your gateway:**
+- Dashboard UI: http://localhost:3000
+- Gateway API: http://localhost:8787
+
+**[🐳 Docker Documentation](./DOCKER.md)** - Complete Docker setup guide
+
+### Option 2: One-Command Local Setup (5 minutes)
+
+```bash
+# Clone and run automated setup
+git clone https://github.com/dongvannhan1000/micro-gateway.git
+cd micro-gateway
+npm run setup
+```
+
+The setup script automatically:
+- ✓ Verifies prerequisites (Node.js, npm)
+- ✓ Creates environment configuration (.dev.vars)
+- ✓ Generates encryption secret
+- ✓ Installs all dependencies
+- ✓ Runs database migrations
+- ✓ Starts both Gateway API (port 8787) and Dashboard UI (port 3000)
+
+**Access your gateway:**
+- Dashboard UI: http://localhost:3000
+- Gateway API: http://localhost:8787
+
+**[📖 Detailed Setup Guide](./docs/SETUP.md)** - Troubleshooting and manual setup instructions
+
+### Self-Hosted Deployment (Production)
 
 ```bash
 # 1. Clone and install
@@ -186,8 +233,53 @@ curl https://your-gateway.workers.dev/v1/chat/completions \
 
 ---
 
+## Error Monitoring (Optional)
+
+The Dashboard UI supports **optional** error monitoring with Sentry. Each deployment uses its own Sentry account - your data stays under your control.
+
+### How It Works
+
+- ✅ **Optional**: No monitoring unless you configure it
+- ✅ **User-controlled**: Each deployment uses its own Sentry DSN
+- ✅ **Privacy-first**: No data sharing with project maintainers
+- ✅ **Self-hosted friendly**: Perfect for open-source deployments
+
+### Quick Setup
+
+```bash
+# 1. Create your own Sentry account (free tier available)
+#    https://sentry.io/signup/
+
+# 2. Create a new project → Select "Next.js"
+
+# 3. Add your DSN to environment variables
+#    Local: .dev.vars
+#    Production: Cloudflare Pages environment variables
+NEXT_PUBLIC_SENTRY_DSN=https://your-dsn@o0.ingest.sentry.io/0
+
+# 4. Rebuild and deploy
+cd apps/dashboard-ui
+npm run build
+```
+
+### Features
+
+When enabled, Sentry provides:
+- 🐛 **Error tracking** - Automatic error capture with stack traces
+- 📊 **Performance monitoring** - Page load times, API response times
+- 🎥 **Session replay** - User interaction recordings when errors occur
+- 🔍 **Source maps** - Readable stack traces in production
+
+**[📖 Complete Sentry Setup Guide](./SENTRY-SETUP.md)** - Detailed configuration and troubleshooting
+
+**Privacy Note**: This project does NOT collect data from users. Each deployment must configure its own Sentry instance to enable monitoring.
+
+---
+
 ## Documentation
 
+- [**SENTRY-SETUP.md**](./SENTRY-SETUP.md) - Error monitoring setup guide
+- [**DOCKER.md**](./DOCKER.md) - Docker setup and configuration
 - [**SELF_HOSTED.md**](./SELF_HOSTED.md) - Deployment guide
 - [**SECURITY.md**](./SECURITY.md) - Security architecture
 - [**CONTRIBUTING.md**](./CONTRIBUTING.md) - Contribution guidelines
