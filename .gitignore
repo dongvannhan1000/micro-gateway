@@ -52,6 +52,9 @@ reports/
 !CONTRIBUTING.md
 !SECURITY.md
 !SELF_HOSTED.md
+!SENTRY*.md
+!MIDDLEWARE*.md
+!DOCKER.md
 
 # Backup Files
 *.nocron
