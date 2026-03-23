@@ -11,6 +11,7 @@
     "dev:gateway": "npm run dev --workspace=@ms-gateway/api",
     "dev:dashboard": "npm run dev --workspace=@ms-gateway/dashboard",
     "deploy:gateway": "npm run deploy --workspace=@ms-gateway/api",
+    "migrate:local": "npm run migrate:local --workspace=@ms-gateway/db",
     "dev": "concurrently \"npm run dev:gateway\" \"npm run dev:dashboard\"",
     "test": "npm test --workspace=@ms-gateway/api"
   },
