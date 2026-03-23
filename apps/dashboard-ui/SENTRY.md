@@ -1,19 +1,35 @@
-# Sentry Error Monitoring Setup
+# Sentry Error Monitoring - Dashboard UI
 
-This document describes the Sentry integration for the Dashboard UI.
+Complete Sentry integration for the Dashboard UI with privacy-first, user-controlled design.
 
-## ⚠️ Important: Privacy & Data Ownership
+## ⚠️ Privacy & Data Ownership
 
-**This is a self-hosted open-source project.** Each deployment should use **its own Sentry account**, not a central one.
+**Each deployment uses its own Sentry account** - no data sharing with project maintainers.
 
-- ✅ **Recommended**: Each user creates their own Sentry account
-- ❌ **Not recommended**: Sharing a single Sentry DSN across all deployments
+- ✅ User-controlled: Your deployment → Your Sentry account
+- ✅ Optional: App works perfectly without Sentry
+- ✅ Privacy-first: Sensitive data filtered automatically
 
-### Why?
-- Session replays contain user interactions
-- Errors may contain sensitive project information
-- Users expect control over their monitoring data
-- GDPR/privacy compliance requires data ownership transparency
+## Quick Setup
+
+### 1. Create Sentry Account
+```
+https://sentry.io/signup/ (free tier: 5,000 errors/month)
+```
+
+### 2. Create Project
+- Select "Next.js" as platform
+- Copy DSN from Settings → Projects → Your Project → Client Keys
+
+### 3. Configure Environment
+```bash
+# Local: .dev.vars
+# Production: Cloudflare Pages environment variables
+NEXT_PUBLIC_SENTRY_DSN=https://your-dsn@o0.ingest.sentry.io/0
+```
+
+### 4. Test & Verify
+See "Testing Sentry" section below.
 
 ## Overview
 
@@ -146,6 +162,82 @@ Or use the built-in test endpoint:
 2. Check **Issues** tab for new errors
 3. Check **Performance** tab for metrics
 4. Check **Replays** tab for session recordings
+
+## Testing Sentry Integration
+
+### Option 1: Test Error Page (Recommended)
+
+Add this to any page temporarily to trigger the error boundary:
+
+```tsx
+// Add to src/app/page.tsx or any component
+"use client";
+
+export default function TestSentryButton() {
+  const triggerError = () => {
+    throw new Error("Sentry test error - This is intentional!");
+  };
+
+  return (
+    <button
+      onClick={triggerError}
+      className="px-4 py-2 bg-red-600 text-white rounded"
+    >
+      Test Sentry Error
+    </button>
+  );
+}
+```
+
+### Option 2: Test Sentry API Directly
+
+```tsx
+"use client";
+
+import * as Sentry from "@sentry/nextjs";
+
+export default function TestSentryCapture() {
+  const captureMessage = () => {
+    Sentry.captureMessage("Test message from Sentry", "info");
+  };
+
+  const captureException = () => {
+    try {
+      throw new Error("Test exception from Sentry");
+    } catch (error) {
+      Sentry.captureException(error);
+    }
+  };
+
+  return (
+    <div className="space-x-2">
+      <button onClick={captureMessage} className="px-4 py-2 bg-blue-600 text-white rounded">
+        Send Test Message
+      </button>
+      <button onClick={captureException} className="px-4 py-2 bg-red-600 text-white rounded">
+        Send Test Exception
+      </button>
+    </div>
+  );
+}
+```
+
+### Expected Results
+
+✅ **Success**: Error appears in Sentry dashboard within 30 seconds
+❌ **Failure**: No error appears → Check DSN configuration and environment variables
+
+### Common Issues
+
+**"No events received"**
+- Ensure `NEXT_PUBLIC_SENTRY_DSN` is set correctly
+- Check you're in production mode (`npm run build && npm start`)
+- Verify network requests to `*.ingest.sentry.io` in browser DevTools
+
+**"Source maps not working"**
+- Ensure `SENTRY_AUTH_TOKEN` is set
+- Check `SENTRY_ORG` and `SENTRY_PROJECT` match your Sentry project
+- Rebuild after updating auth token: `npm run build`
 
 ## Source Maps
 

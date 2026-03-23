@@ -359,3 +359,19 @@ See [CONTRIBUTING.md](./CONTRIBUTING.md) for guidelines.
 **Built with**: Hono.js, Next.js, Cloudflare Workers, D1, KV
 
 **Repository**: https://github.com/dongvannhan1000/micro-gateway
+
+---
+
+## ⚠️ Development Notes
+
+### Next.js 16 Middleware Warning
+
+You may see this warning when running the dev server:
+
+```
+⚠ The "middleware" file convention is deprecated. Please use "proxy" instead.
+```
+
+**This is expected and safe to ignore.** The middleware is used for Supabase auth token refresh and is fully supported in Next.js 16. The new `proxy` API is still experimental, so we'll continue using middleware until it becomes stable.
+
+**No action needed** - your auth flow works perfectly.
