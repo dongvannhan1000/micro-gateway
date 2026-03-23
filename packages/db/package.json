@@ -7,7 +7,7 @@
     "module": "src/index.ts",
     "type": "module",
     "scripts": {
-        "migrate:local": "wrangler d1 migrations apply ms-gateway-db --local",
+        "migrate:local": "wrangler d1 migrations apply ms-gateway-db --local --config ../../apps/gateway-api/wrangler.toml",
         "migrate:remote": "wrangler d1 migrations apply ms-gateway-db --remote"
     },
     "devDependencies": {

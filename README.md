@@ -233,8 +233,52 @@ curl https://your-gateway.workers.dev/v1/chat/completions \
 
 ---
 
+## Error Monitoring (Optional)
+
+The Dashboard UI supports **optional** error monitoring with Sentry. Each deployment uses its own Sentry account - your data stays under your control.
+
+### How It Works
+
+- ✅ **Optional**: No monitoring unless you configure it
+- ✅ **User-controlled**: Each deployment uses its own Sentry DSN
+- ✅ **Privacy-first**: No data sharing with project maintainers
+- ✅ **Self-hosted friendly**: Perfect for open-source deployments
+
+### Quick Setup
+
+```bash
+# 1. Create your own Sentry account (free tier available)
+#    https://sentry.io/signup/
+
+# 2. Create a new project → Select "Next.js"
+
+# 3. Add your DSN to environment variables
+#    Local: .dev.vars
+#    Production: Cloudflare Pages environment variables
+NEXT_PUBLIC_SENTRY_DSN=https://your-dsn@o0.ingest.sentry.io/0
+
+# 4. Rebuild and deploy
+cd apps/dashboard-ui
+npm run build
+```
+
+### Features
+
+When enabled, Sentry provides:
+- 🐛 **Error tracking** - Automatic error capture with stack traces
+- 📊 **Performance monitoring** - Page load times, API response times
+- 🎥 **Session replay** - User interaction recordings when errors occur
+- 🔍 **Source maps** - Readable stack traces in production
+
+**[📖 Complete Sentry Setup Guide](./SENTRY-SETUP.md)** - Detailed configuration and troubleshooting
+
+**Privacy Note**: This project does NOT collect data from users. Each deployment must configure its own Sentry instance to enable monitoring.
+
+---
+
 ## Documentation
 
+- [**SENTRY-SETUP.md**](./SENTRY-SETUP.md) - Error monitoring setup guide
 - [**DOCKER.md**](./DOCKER.md) - Docker setup and configuration
 - [**SELF_HOSTED.md**](./SELF_HOSTED.md) - Deployment guide
 - [**SECURITY.md**](./SECURITY.md) - Security architecture
